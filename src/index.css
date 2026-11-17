@@ -738,3 +738,60 @@ html[data-wm-theme='light'] .wm-app select.bg-white {
 html[data-wm-theme='light'] .wm-app .wm-hero select.bg-white {
   background: #1a2450 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c8d0e8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 0.6rem center / 1rem;
 }
+
+/* ---------- Waymark 3.0 refinement: navigation, drawers, motion, RTL ---------- */
+
+/* Secondary navigation bar: fixed height, so switching categories never moves the page. */
+.wm-subnav { background: rgb(14 20 52 / 0.55); }
+html[data-wm-theme='light'] .wm-subnav { background: rgb(241 243 255 / 0.85); }
+html[data-wm-theme='light'] .wm-subnav .hover\:text-white:hover,
+html[data-wm-theme='light'] .wm-topbar .wm-cat:hover { color: var(--color-navy); }
+html[data-wm-theme='light'] .wm-subnav a[aria-current='page'] { color: var(--color-navy); background: rgb(106 90 249 / 0.12); }
+
+/* Drawers: a full-height panel on the inline-end edge; a full-screen sheet on phones. */
+.wm-app dialog.wm-drawer,
+dialog.wm-drawer {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-end: 0;
+  inset-inline-start: auto;
+  margin: 0;
+  height: 100dvh;
+  max-height: 100dvh;
+  width: min(var(--wm-drawer-w, 32rem), 100vw);
+  max-width: 100vw;
+  border-radius: 0;
+  border-inline-start: 1px solid var(--color-slate-200);
+}
+.wm-app dialog.wm-drawer.bg-white { background: #121a3a; }
+html[data-wm-theme='light'] .wm-app dialog.wm-drawer.bg-white { background: #ffffff; }
+dialog.wm-drawer.wm-drawer-start { inset-inline-start: 0; inset-inline-end: auto; border-inline-start: 0; border-inline-end: 1px solid var(--color-slate-200); }
+dialog.wm-drawer[open] { animation: wm-drawer-in 0.18s ease-out; }
+@keyframes wm-drawer-in { from { opacity: 0.4; transform: translateX(1.5rem); } to { opacity: 1; transform: none; } }
+[dir='rtl'] dialog.wm-drawer[open] { animation-name: wm-drawer-in-rtl; }
+@keyframes wm-drawer-in-rtl { from { opacity: 0.4; transform: translateX(-1.5rem); } to { opacity: 1; transform: none; } }
+dialog.wm-drawer::backdrop { background: rgb(5 8 22 / 0.6); }
+
+/* The user's "Reduce motion" setting, in addition to the operating-system preference. */
+html[data-wm-reduce-motion='true'] .wm-app *,
+html[data-wm-reduce-motion='true'] .wm-app *::before,
+html[data-wm-reduce-motion='true'] .wm-app *::after,
+html[data-wm-reduce-motion='true'] dialog.wm-drawer { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+
+/* Right-to-left: mirror only what carries direction. Maps, charts and numbers keep their own layout. */
+[dir='rtl'] .wm-app .wm-skip-link { left: auto; right: 1rem; }
+[dir='rtl'] .wm-app .wm-hero-shade { transform: scaleX(-1); }
+[dir='rtl'] .wm-app .maplibregl-map,
+[dir='rtl'] .wm-app canvas,
+[dir='rtl'] .wm-app svg[data-chart],
+[dir='rtl'] .wm-app .recharts-wrapper { direction: ltr; }
+[dir='rtl'] .wm-app input[type='number'],
+[dir='rtl'] .wm-app .tabular-nums { unicode-bidi: plaintext; }
+[dir='rtl'] .wm-app table th { text-align: right; }
+[dir='rtl'] .wm-app select { padding: 0 0.75rem 0 2.1rem; background-position: left 0.6rem center; }
+
+/* Touch targets: interactive controls in the workspace are at least 36px tall on touch screens. */
+@media (pointer: coarse) {
+  .wm-app button:not([role='switch']):not(.wm-inline),
+  .wm-app a.wm-cat { min-height: 2.5rem; }
+}

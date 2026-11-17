@@ -49,6 +49,14 @@ export function loadConfig(env = process.env) {
     supabaseServiceKey: env.SUPABASE_SERVICE_ROLE_KEY || '',
     extraAllowedHosts: (env.EXTRA_ALLOWED_HOSTS || '').split(',').map((s) => s.trim()).filter(Boolean),
 
+    // Email alerts (server/email.js). Without a provider, mail is rendered to a mock outbox and never sent.
+    emailTransport: (env.EMAIL_TRANSPORT || 'mock').toLowerCase(),
+    emailApiKey: env.EMAIL_API_KEY || '',
+    emailFrom: env.EMAIL_FROM || '',
+    emailAllowedDomains: (env.EMAIL_ALLOWED_DOMAINS || '').split(',').map((s) => s.trim()).filter(Boolean),
+    emailHourlyLimit: Number(env.EMAIL_HOURLY_LIMIT) || 30,
+    emailAllowAnonymous: env.EMAIL_ALLOW_ANONYMOUS === 'true',
+
     // AI providers for the Agent Hub. Model ids are configuration, never code: provider line-ups change.
     anthropicEffort: env.ANTHROPIC_EFFORT ?? 'medium',
     openaiKey: env.OPENAI_API_KEY || '',

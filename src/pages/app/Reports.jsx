@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { reportBranding, useBranding } from '../../state/branding.js'
 import { formatCo2e } from '../../../shared/emissions.js'
 import { Card, ConfirmModal, DemoTag, Empty, Gate, Notice, PageHeader, downloadFile, formatDate, useToast } from '../../components/app/kit.jsx'
 import { Badge, Button, Icon } from '../../components/ui.jsx'
@@ -19,19 +20,19 @@ function ReportView({ report }) {
         <section key={section.heading} className="mt-5">
           <h3 className="font-bold text-navy">{section.heading}</h3>
           {section.paragraphs?.map((p) => <p key={p} className="mt-1 text-sm text-slate-700">{p}</p>)}
-          {section.bullets && <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm text-slate-700">{section.bullets.map((b) => <li key={b}>{b}</li>)}</ul>}
+          {section.bullets && <ul className="mt-1 list-disc space-y-0.5 ps-5 text-sm text-slate-700">{section.bullets.map((b) => <li key={b}>{b}</li>)}</ul>}
           {section.table && (
             <div tabIndex={0} role="region" aria-label={`${section.heading}, scrollable table`} className="mt-2 overflow-x-auto">
               <table className="w-full min-w-[30rem] text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
-                    {section.table.head.map((h) => <th key={h} scope="col" className="py-1.5 pr-3 font-semibold">{h}</th>)}
+                  <tr className="border-b border-slate-200 text-start text-xs text-slate-500">
+                    {section.table.head.map((h) => <th key={h} scope="col" className="py-1.5 pe-3 font-semibold">{h}</th>)}
                   </tr>
                 </thead>
                 <tbody>
                   {section.table.rows.map((row, i) => (
                     <tr key={i} className="border-b border-slate-100 align-top">
-                      {row.map((cell, j) => <td key={j} className="py-1.5 pr-3 text-slate-700">{cell}</td>)}
+                      {row.map((cell, j) => <td key={j} className="py-1.5 pe-3 text-slate-700">{cell}</td>)}
                     </tr>
                   ))}
                 </tbody>
@@ -51,6 +52,7 @@ function ReportView({ report }) {
 
 export default function Reports() {
   const { model, ws, fx, health, isDemo, can, saveRecord, deleteRecord, counts, limit } = useWorkspace()
+  const branding = useBranding()
   const toast = useToast()
   const [report, setReport] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -69,7 +71,7 @@ export default function Reports() {
   const exportPdf = async () => {
     setBusy(true)
     try {
-      const blob = await reportToPdf(report)
+      const blob = await reportToPdf(report, { branding: reportBranding(branding.data, ws.company) })
       downloadFile(`${slug(report.title)}.pdf`, blob, 'application/pdf')
     } catch (err) {
       toast(`PDF export failed: ${err.message}`, 'error')
@@ -148,7 +150,7 @@ export default function Reports() {
           <ul className="divide-y divide-slate-100">
             {ws.reports.map((r) => (
               <li key={r.id} className="flex items-center justify-between gap-2 py-2 text-sm">
-                <button type="button" className="min-w-0 truncate text-left font-medium text-brand-800 hover:underline" onClick={() => setReport(r)}>{r.title}</button>
+                <button type="button" className="min-w-0 truncate text-start font-medium text-brand-800 hover:underline" onClick={() => setReport(r)}>{r.title}</button>
                 <span className="flex shrink-0 items-center gap-2">
                   <span className="text-xs text-slate-500">{formatDate(r.generatedAt)}</span>
                   <button type="button" aria-label={`Delete ${r.title}`} onClick={() => setDeleting(r)} className="rounded p-1 text-slate-500 hover:text-rose-700"><Icon name="trash" className="h-4 w-4" /></button>

@@ -330,9 +330,9 @@ export function DataTable({ columns, rows, rowKey, caption, onRowClick, empty })
       <table className="w-full min-w-[34rem] text-sm">
         {caption && <caption className="sr-only">{caption}</caption>}
         <thead>
-          <tr className="border-b border-slate-200 text-left text-xs tracking-wide text-slate-500 uppercase">
+          <tr className="border-b border-slate-200 text-start text-xs tracking-wide text-slate-500 uppercase">
             {columns.map((c) => (
-              <th key={c.key} scope="col" aria-sort={c.sort} className={`px-3 py-2 font-semibold whitespace-nowrap ${c.right ? 'text-right' : ''}`}>{c.header ?? c.label}</th>
+              <th key={c.key} scope="col" aria-sort={c.sort} className={`px-3 py-2 font-semibold whitespace-nowrap ${c.right ? 'text-end' : ''}`}>{c.header ?? c.label}</th>
             ))}
           </tr>
         </thead>
@@ -340,7 +340,7 @@ export function DataTable({ columns, rows, rowKey, caption, onRowClick, empty })
           {rows.map((row) => (
             <tr key={rowKey(row)} tabIndex={onRowClick ? 0 : undefined} aria-description={onRowClick ? 'Press Enter to open details' : undefined} onKeyDown={onRowClick ? (e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onRowClick(row) } } : undefined} onClick={onRowClick ? () => onRowClick(row) : undefined} className={`border-b border-slate-100 align-top ${onRowClick ? 'cursor-pointer hover:bg-slate-50' : ''}`}>
               {columns.map((c) => (
-                <td key={c.key} className={`px-3 py-2.5 ${c.right ? 'text-right tabular-nums' : ''}`}>{c.render(row)}</td>
+                <td key={c.key} className={`px-3 py-2.5 ${c.right ? 'text-end tabular-nums' : ''}`}>{c.render(row)}</td>
               ))}
             </tr>
           ))}
@@ -389,7 +389,7 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div aria-live="polite" className="fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-[60] flex w-[min(22rem,calc(100vw-2rem))] flex-col gap-2 print:hidden">
+      <div aria-live="polite" className="fixed end-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-[60] flex w-[min(22rem,calc(100vw-2rem))] flex-col gap-2 print:hidden">
         {toasts.map((t) => (
           <div key={t.id} className={`animate-fade-up rounded-xl px-4 py-2.5 text-sm font-medium text-white shadow-lg ${t.tone === 'error' ? 'bg-rose-700' : 'bg-[#2a3768]'}`}>
             {t.message}
@@ -445,4 +445,192 @@ export function downloadFile(filename, content, type) {
   a.click()
   a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+/* ------------------------------------------------------------------------------------------
+   Layout primitives shared by every workspace page (Waymark 3.0 refinement).
+   They replace page-specific one-offs: drawers for detail, bounded lists for long histories,
+   compact metric rows and collapsible panels. Use these before writing new page CSS.
+------------------------------------------------------------------------------------------- */
+
+/**
+ * A side panel for details. Opens from the inline-end edge (right in LTR, left in RTL) on wide
+ * screens and as a full-height sheet on phones. Built on <dialog>, so focus is trapped and
+ * Escape closes it.
+ */
+export function Drawer({ open, onClose, title, subtitle, children, footer, size = 'md' }) {
+  const ref = useRef(null)
+  useEffect(() => {
+    const el = ref.current
+    const previous = document.activeElement
+    if (open && !el.open) el.showModal()
+    if (!open && el.open) el.close()
+    return () => { if (previous?.isConnected) previous.focus() }
+  }, [open])
+  return (
+    <dialog ref={ref} onClose={onClose} aria-label={title} className="wm-drawer bg-white p-0 text-slate-700 shadow-2xl" style={{ '--wm-drawer-w': { sm: '24rem', md: '32rem', lg: '44rem' }[size] }}>
+      {open && (
+        <div className="flex h-full max-h-[100dvh] flex-col">
+          <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-3.5">
+            <div className="min-w-0">
+              <h2 className="text-lg font-bold text-navy">{title}</h2>
+              {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
+            </div>
+            <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1 text-slate-500 hover:bg-slate-100">
+              <Icon name="close" className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="wm-scroll min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+          {footer && <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 px-5 py-3">{footer}</div>}
+        </div>
+      )}
+    </dialog>
+  )
+}
+
+/** A compact page header: title, one line of description, actions on the same row on wide screens. */
+export function CompactPageHeader({ title, description, actions, badge, children }) {
+  return (
+    <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 tabIndex={-1} className="text-xl font-bold text-navy focus:outline-none sm:text-2xl">{title}</h1>
+          {badge}
+        </div>
+        {(description || children) && <p className="mt-0.5 max-w-3xl text-sm text-slate-600">{description ?? children}</p>}
+      </div>
+      {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+    </div>
+  )
+}
+
+/** A row of compact metrics. Columns adapt: 2 on phones, up to `max` on desktops. */
+export function MetricGrid({ children, max = 4, className = '' }) {
+  const cols = { 2: 'sm:grid-cols-2', 3: 'sm:grid-cols-3', 4: 'sm:grid-cols-2 lg:grid-cols-4', 5: 'sm:grid-cols-3 lg:grid-cols-5', 6: 'sm:grid-cols-3 lg:grid-cols-6' }[max] ?? 'sm:grid-cols-2 lg:grid-cols-4'
+  return <div className={`wm-metrics grid grid-cols-2 gap-2.5 ${cols} ${className}`}>{children}</div>
+}
+
+/** A single compact metric: smaller than Stat, for summary rows. */
+export function Metric({ label, value, sub, tone = 'default', icon }) {
+  const toneClass = { default: 'text-navy', good: 'text-emerald-700', warn: 'text-amber-700', bad: 'text-rose-700' }[tone] ?? 'text-navy'
+  return (
+    <div className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm shadow-slate-900/5">
+      <p className="flex items-center gap-1.5 text-[0.6875rem] font-medium tracking-wide text-slate-500 uppercase">
+        {icon && <Icon name={icon} className="h-3.5 w-3.5 shrink-0" />}<span className="truncate">{label}</span>
+      </p>
+      <p className={`font-display mt-0.5 text-lg leading-tight font-bold tabular-nums ${toneClass}`}>{value}</p>
+      {sub && <p className="mt-0.5 truncate text-xs text-slate-500" title={typeof sub === 'string' ? sub : undefined}>{sub}</p>}
+    </div>
+  )
+}
+
+/** A panel that starts collapsed (or open) and keeps its header compact. Native <details>, so it works without script. */
+export function CollapsiblePanel({ title, summary, defaultOpen = false, children, className = '', aside }) {
+  return (
+    <details open={defaultOpen} className={`group min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-900/5 ${className}`}>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0">
+          <span className="block text-[0.9375rem] font-bold text-navy">{title}</span>
+          {summary && <span className="block truncate text-xs text-slate-500">{summary}</span>}
+        </span>
+        <span className="flex shrink-0 items-center gap-2">
+          {aside}
+          <Icon name="chevronDown" className="h-4 w-4 text-slate-500 transition-transform group-open:rotate-180" />
+        </span>
+      </summary>
+      <div className="border-t border-slate-200 px-4 py-3">{children}</div>
+    </details>
+  )
+}
+
+/** A search box with a label for assistive technology. */
+export function SearchInput({ label, value, onChange, placeholder, className = '' }) {
+  const id = useId()
+  return (
+    <div className={`relative min-w-0 ${className}`}>
+      <label htmlFor={id} className="sr-only">{label}</label>
+      <Icon name="search" className="pointer-events-none absolute start-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+      <input id={id} type="search" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder ?? label} className={`${control} ${controlState(false)} ps-8`} />
+    </div>
+  )
+}
+
+/** Paging state for a list. Returns to the first page when `resetKey` changes (for example a new search). */
+export function usePaged(rows, pageSize = 10, resetKey = '') {
+  const [page, setPage] = useState(0)
+  useEffect(() => setPage(0), [resetKey])
+  const pages = Math.max(1, Math.ceil(rows.length / pageSize))
+  const current = Math.min(page, pages - 1)
+  return { page: current, pages, setPage, rows: rows.slice(current * pageSize, current * pageSize + pageSize), total: rows.length, from: rows.length ? current * pageSize + 1 : 0, to: Math.min(rows.length, (current + 1) * pageSize) }
+}
+
+export function Pager({ paged, label = 'Pages' }) {
+  if (paged.total <= 0 || paged.pages <= 1) return null
+  return (
+    <nav aria-label={label} className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+      <span className="tabular-nums">{paged.from}–{paged.to} / {paged.total}</span>
+      <span className="flex items-center gap-1">
+        <button type="button" aria-label="Previous page" disabled={paged.page === 0} onClick={() => paged.setPage(paged.page - 1)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 disabled:opacity-40"><Icon name="chevronLeft" className="h-4 w-4 rtl:rotate-180" /></button>
+        <span className="px-1 tabular-nums">{paged.page + 1} / {paged.pages}</span>
+        <button type="button" aria-label="Next page" disabled={paged.page >= paged.pages - 1} onClick={() => paged.setPage(paged.page + 1)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 disabled:opacity-40"><Icon name="chevronRight" className="h-4 w-4 rtl:rotate-180" /></button>
+      </span>
+    </nav>
+  )
+}
+
+/** A bounded, scrollable list area. Long histories scroll inside it rather than stretching the page. */
+export function BoundedList({ children, maxHeight = '24rem', label, className = '' }) {
+  return (
+    <div role="region" aria-label={label} tabIndex={0} className={`wm-scroll overflow-y-auto ${className}`} style={{ maxHeight }}>
+      {children}
+    </div>
+  )
+}
+
+/**
+ * Tabs with their panel. `tabs` are { id, label, count?, content }. Only the active panel renders.
+ * Controlled with `active`/`onChange`, or uncontrolled. `idPrefix` keeps ids unique on pages with several tab sets.
+ */
+export function SectionTabs({ tabs, active, onChange, idPrefix = 'sec', label = 'Sections', className = '' }) {
+  const [own, setOwn] = useState(tabs[0]?.id)
+  const wanted = active ?? own
+  const current = tabs.some((t) => t.id === wanted) ? wanted : tabs[0]?.id
+  const set = (id) => { setOwn(id); onChange?.(id) }
+  const tab = tabs.find((t) => t.id === current)
+  return (
+    <div className={`min-w-0 ${className}`}>
+      <div role="tablist" aria-label={label} className="wm-strip mb-3 flex max-w-full gap-1 overflow-x-auto border-b border-slate-200" onKeyDown={(e) => {
+        const index = tabs.findIndex((t) => t.id === current)
+        const forward = document.documentElement.dir === 'rtl' ? 'ArrowLeft' : 'ArrowRight'
+        const backward = forward === 'ArrowLeft' ? 'ArrowRight' : 'ArrowLeft'
+        const next = e.key === forward ? (index + 1) % tabs.length : e.key === backward ? (index + tabs.length - 1) % tabs.length : e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : null
+        if (next !== null) { e.preventDefault(); set(tabs[next].id); e.currentTarget.querySelectorAll('[role="tab"]')[next].focus() }
+      }}>
+        {tabs.map((t) => (
+          <button key={t.id} type="button" role="tab" id={`${idPrefix}-tab-${t.id}`} aria-controls={`${idPrefix}-panel-${t.id}`} aria-selected={current === t.id} tabIndex={current === t.id ? 0 : -1} onClick={() => set(t.id)}
+            className={`-mb-px inline-flex min-h-10 items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium whitespace-nowrap ${current === t.id ? 'border-brand-700 text-brand-800' : 'border-transparent text-slate-600 hover:text-navy'}`}>
+            {t.label}
+            {t.count != null && <span className="rounded-full bg-slate-100 px-1.5 text-[0.6875rem] font-semibold tabular-nums text-slate-600">{t.count}</span>}
+          </button>
+        ))}
+      </div>
+      {tab && <div role="tabpanel" id={`${idPrefix}-panel-${tab.id}`} aria-labelledby={`${idPrefix}-tab-${tab.id}`} className="min-w-0">{tab.content}</div>}
+    </div>
+  )
+}
+
+/** A small dot-and-label status indicator. */
+export function StatusPill({ tone = 'slate', children }) {
+  const dot = { emerald: 'bg-emerald-500', amber: 'bg-amber-500', rose: 'bg-rose-500', sky: 'bg-sky-500', brand: 'bg-brand-500', slate: 'bg-slate-400' }[tone] ?? 'bg-slate-400'
+  return <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-slate-200 px-2 py-0.5 text-xs font-medium text-slate-700"><span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${dot}`} />{children}</span>
+}
+
+/** Main content plus a secondary panel. The panel drops below the main content on narrow screens. */
+export function WorkspaceLayout({ main, aside, asideWidth = '22rem', className = '' }) {
+  return (
+    <div className={`grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_var(--wm-aside)] ${className}`} style={{ '--wm-aside': asideWidth }}>
+      <div className="min-w-0 space-y-4">{main}</div>
+      {aside && <div className="min-w-0 space-y-4">{aside}</div>}
+    </div>
+  )
 }

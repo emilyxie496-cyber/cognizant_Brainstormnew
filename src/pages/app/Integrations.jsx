@@ -180,7 +180,7 @@ function ManageDialog({ def, view, data, onClose, reload, openImport }) {
 
         <details className="border-t border-slate-200 pt-2">
           <summary className="cursor-pointer text-sm font-semibold text-navy">What Waymark accesses</summary>
-          <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-xs text-slate-600">{def.permissions.map((p) => <li key={p}>{p}</li>)}</ul>
+          <ul className="mt-1.5 list-disc space-y-0.5 ps-5 text-xs text-slate-600">{def.permissions.map((p) => <li key={p}>{p}</li>)}</ul>
           <p className="mt-1.5 text-xs text-slate-500">Used for: {def.features.join(', ')}.</p>
         </details>
         <details className="border-t border-slate-200 pt-2">

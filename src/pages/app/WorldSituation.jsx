@@ -7,6 +7,7 @@
   and it never invents one. When the sources cannot be reached, the page says so.
 */
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import AiLauncher from '../../components/app/AiLauncher.jsx'
 import { countryName } from '../../../shared/countries.js'
 import WeatherIntelligence from '../../components/app/WeatherIntelligence.jsx'
 import { Investigate } from '../../components/app/PlatformKit.jsx'
@@ -195,7 +196,7 @@ export default function WorldSituation() {
       <PageHeader
         title="Global Risk Intelligence"
         badge={isDemo && <DemoTag />}
-        actions={<Button variant="secondary" onClick={() => load(category, true)} disabled={state.loading}><Icon name="refresh" className="h-4 w-4" /> Refresh</Button>}
+        actions={<><AiLauncher task="Investigate potential exposure from the latest disruption news to my suppliers and shipments." context={['Global Risk Intelligence', 'Recent disruption headlines matched to company records']} /><Button variant="secondary" onClick={() => load(category, true)} disabled={state.loading}><Icon name="refresh" className="h-4 w-4" /> Refresh</Button></>}
       >
         Trade, shipping and disruption headlines from the last week, matched to your suppliers and shipments. A match shows possible exposure, never a confirmed effect.
       </PageHeader>
@@ -270,7 +271,7 @@ export default function WorldSituation() {
                 <ul className="space-y-2">
                   {regionCounts.map(([region, n]) => (
                     <li key={region}>
-                      <button type="button" aria-pressed={filters.region === region} onClick={() => set('region')(filters.region === region ? '' : region)} className="w-full text-left">
+                      <button type="button" aria-pressed={filters.region === region} onClick={() => set('region')(filters.region === region ? '' : region)} className="w-full text-start">
                         <span className="flex justify-between gap-2 text-sm"><span className={filters.region === region ? 'font-bold text-navy' : 'text-slate-700'}>{region}</span><span className="text-slate-500 tabular-nums">{n}</span></span>
                         <span className="mt-1 block h-1.5 rounded-full bg-slate-100"><span className="block h-1.5 rounded-full bg-brand-600" style={{ width: `${(n / maxRegion) * 100}%` }} /></span>
                       </button>

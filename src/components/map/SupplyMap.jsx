@@ -122,7 +122,7 @@ function vehicleElement(vehicle, onSelect) {
   return el
 }
 
-export default function SupplyMap({ data, onSelect, className = 'h-[28rem]', label = 'Supply-chain map' }) {
+export default function SupplyMap({ data, onSelect, className = 'h-[28rem]', label = 'Supply-chain map', textList = true }) {
   const [webgl] = useState(supportsWebGL)
   const [failed, setFailed] = useState(false)
   const [ready, setReady] = useState(false)
@@ -231,7 +231,7 @@ export default function SupplyMap({ data, onSelect, className = 'h-[28rem]', lab
       <div ref={container} style={{ width: '100%', height: '100%' }} />
       {!ready && <Skeleton className="absolute inset-0 rounded-none" />}
     </div>
-    <MapText data={data} onSelect={onSelect} />
+    {textList && <MapText data={data} onSelect={onSelect} />}
     </>
   )
 }

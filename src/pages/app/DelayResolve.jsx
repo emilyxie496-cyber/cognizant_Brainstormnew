@@ -175,7 +175,7 @@ export default function DelayResolve() {
         <h1 tabIndex={-1} className="text-2xl font-bold text-navy focus:outline-none sm:text-[1.7rem]">Resolve delay · {shipment.reference}</h1>
         <Badge tone="rose">Delayed</Badge>
         {isDemo && <DemoTag />}
-        <AnalyzeButton type="shipment" id={shipment.id} className="ml-auto" />
+        <AnalyzeButton type="shipment" id={shipment.id} className="ms-auto" />
       </div>
       <p className="mt-1 text-sm text-slate-600">
         {[shipment.product?.name, shipment.supplier?.name, modeLabel(shipment.mode), `recorded ETA ${formatDate(shipment.eta)}`].filter(Boolean).join(' · ')}
@@ -380,7 +380,7 @@ export default function DelayResolve() {
               <div className="grid gap-2 sm:grid-cols-3">
                 {READINESS_OPTIONS.map((o) => (
                   <label key={o.value} className={`cursor-pointer rounded-xl border p-3 text-sm font-semibold ${answers.readiness === o.value ? 'border-brand-500 bg-brand-50 text-navy' : 'border-slate-200 text-slate-700 hover:border-brand-400'}`}>
-                    <input type="radio" name="readiness" className="mr-2 accent-[#7c6cff]" checked={answers.readiness === o.value} onChange={() => set('readiness')(o.value)} />
+                    <input type="radio" name="readiness" className="me-2 accent-[#7c6cff]" checked={answers.readiness === o.value} onChange={() => set('readiness')(o.value)} />
                     {o.label}
                   </label>
                 ))}
@@ -416,13 +416,13 @@ export default function DelayResolve() {
 
               {plan.branch === 'inventory_unknown' ? (
                 <div tabIndex={0} role="region" aria-label="Outcome range by option, scrollable" className="mt-3 overflow-x-auto">
-                  <table className="w-full min-w-[26rem] text-left text-sm">
+                  <table className="w-full min-w-[26rem] text-start text-sm">
                     <caption className="sr-only">Outcome range by option</caption>
-                    <thead><tr className="border-b border-slate-200 text-xs text-slate-500"><th className="py-2 pr-3 font-semibold">Option</th><th className="py-2 pr-3 font-semibold">If {days(plan.coverage.range[1])} of stock</th><th className="py-2 font-semibold">If no stock</th></tr></thead>
+                    <thead><tr className="border-b border-slate-200 text-xs text-slate-500"><th className="py-2 pe-3 font-semibold">Option</th><th className="py-2 pe-3 font-semibold">If {days(plan.coverage.range[1])} of stock</th><th className="py-2 font-semibold">If no stock</th></tr></thead>
                     <tbody>
                       {plan.options.map((o) => {
                         const cell = (x) => (!x ? 'Not needed' : !x.feasible ? 'Not available' : x.id === 'wait' ? `${days(x.uncoveredDays)} without stock` : `${x.extraCostCad == null ? 'Cost not available' : money(x.extraCostCad)}${x.uncoveredDays > 0 ? `, ${days(x.uncoveredDays)} still uncovered` : ''}`)
-                        return <tr key={o.id} className="border-b border-slate-100"><td className="py-2 pr-3 font-semibold text-navy">{o.name}</td><td className="py-2 pr-3 tabular-nums">{cell(o.range.best)}</td><td className="py-2 tabular-nums">{cell(o.range.worst)}</td></tr>
+                        return <tr key={o.id} className="border-b border-slate-100"><td className="py-2 pe-3 font-semibold text-navy">{o.name}</td><td className="py-2 pe-3 tabular-nums">{cell(o.range.best)}</td><td className="py-2 tabular-nums">{cell(o.range.worst)}</td></tr>
                       })}
                     </tbody>
                   </table>

@@ -13,7 +13,7 @@
   rebuild the same model the screens use. It is validated and never stored.
 */
 import express from 'express'
-import { INTEGRATIONS, LLM_PROVIDER_IDS, NOTIFICATION_CATEGORIES, integrationById } from '../shared/integrations.js'
+import { EMAIL_CATEGORIES, INTEGRATIONS, LLM_PROVIDER_IDS, NOTIFICATION_CATEGORIES, integrationById } from '../shared/integrations.js'
 import { can } from '../shared/entitlements.js'
 import { buildModel } from '../src/engine/model.js'
 import { NEWS_CATEGORIES, fetchWorldNews } from '../supabase/functions/_shared/news.js'
@@ -21,6 +21,8 @@ import { runAgent } from './agent/orchestrator.js'
 import { TOOLS } from './agent/tools.js'
 import { LLM_PROVIDERS } from './ai/providers.js'
 import { ApprovalError, canDecide, createApprovals } from './approvals.js'
+import { BrandingError, createBranding } from './branding.js'
+import { EmailError, createEmailNotifier, createEmailTransport } from './email.js'
 import { createVault, randomToken, vaultSecret } from './crypto.js'
 import { UpstreamError, ttlCache } from './http.js'
 import { verifyShopifyWebhook } from './integrations/adapters.js'
@@ -69,7 +71,14 @@ export function mountPlatform(app, config, { fetchImpl = fetch } = {}) {
   const vault = createVault(vaultSecret(config))
   const integrations = createIntegrationService({ config, store, vault, fetchImpl })
   const notifier = createNotifier({ store, integrations })
-  const approvals = createApprovals({ store, notifier, integrations })
+  const branding = createBranding({ store })
+  const email = createEmailNotifier({ config, store, transport: createEmailTransport(config, fetchImpl), brandingOf: branding.get })
+  // Email is a side channel: a failed email never fails the action that triggered it.
+  const quietly = (promise) => Promise.resolve(promise).catch((err) => console.error('[email]', err.message))
+  const approvals = createApprovals({
+    store, notifier, integrations,
+    onPending: (tenant, approval) => quietly(email.onEvent(tenant, { category: 'pending_approval', subject: approval.title, detail: `${approval.action?.label ?? 'An action'} is waiting for an owner or admin to approve or reject it.`, link: `${config.appBaseUrl}/app/approvals`, dedupeKey: `approval:${approval.id}` })),
+  })
   const weatherCache = ttlCache(30 * 60_000)
   const newsCache = ttlCache(15 * 60_000)
   const agentRate = new Map()
@@ -101,6 +110,7 @@ export function mountPlatform(app, config, { fetchImpl = fetch } = {}) {
       if (err instanceof HttpError) return res.status(err.status).json({ error: err.code, message: err.message })
       if (err instanceof ConfigError) return res.status(400).json({ error: 'invalid_configuration', message: err.message })
       if (err instanceof ApprovalError) return res.status(err.status).json({ error: 'approval_error', message: err.message })
+      if (err instanceof BrandingError || err instanceof EmailError) return res.status(err.status).json({ error: 'invalid_input', message: err.message })
       if (err instanceof ProviderError) return res.status(502).json({ error: err.code, message: err.message })
       if (err instanceof UpstreamError) return res.status(502).json({ error: err.code, message: err.message })
       console.error('[platform]', err)
@@ -171,6 +181,11 @@ export function mountPlatform(app, config, { fetchImpl = fetch } = {}) {
         if (prefs.enabled && prefs.categories[category] !== false && (await integrations.statusOf(tenant, channel)) === 'connected') out.push(channel)
       }
       return out
+    },
+    notify: {
+      alert: (tenant, alert, ctx) => quietly(email.onAlert(tenant, alert, { demo: Boolean(ctx?.model?.company?.isDemo) })),
+      investigation: (tenant, alert, run) => quietly(email.onEvent(tenant, { category: 'investigation_complete', subject: alert.shipmentRefs?.[0] ?? alert.title, level: alert.level, detail: run.result?.summary ? String(run.result.summary).slice(0, 260) : `Automated investigation ${run.status}.`, link: `${config.appBaseUrl}/app/activity`, dedupeKey: `run:${run.id}` })),
+      failure: (tenant, error) => quietly(email.onEvent(tenant, { category: 'monitoring_failure', subject: 'Automated monitoring', detail: error, link: `${config.appBaseUrl}/app/activity`, dedupeKey: `monitor-failure:${new Date().toISOString().slice(0, 13)}` })),
     },
   })
   monitor.start(config.monitorIntervalMinutes, async tenant => {
@@ -382,6 +397,29 @@ export function mountPlatform(app, config, { fetchImpl = fetch } = {}) {
     res.json({ approval: await approvals.decide(tenant, req.params.id, { decision: req.body?.decision, note: req.body?.note, actor, role }) })
   }, { write: true }))
 
+  /* ---------- Company branding ---------- */
+
+  const brandingJson = express.json({ limit: '1mb' })
+  app.get('/api/branding', route(async (req, res, { tenant }) => res.json({ branding: await branding.get(tenant) })))
+  app.put('/api/branding', brandingJson, route(async (req, res, { tenant, actor }) => res.json({ branding: await branding.save(tenant, req.body ?? {}, actor) }), { admin: true }))
+
+  /* ---------- Email alerts ---------- */
+
+  // Email has its own routes: it is not an integration, and the recipient list is an owner/admin decision.
+  app.get('/api/notifications/email', route(async (req, res, { tenant, role }) => {
+    res.json({
+      preferences: await email.preferences(tenant), categories: EMAIL_CATEGORIES, canEdit: canDecide(role),
+      transport: { kind: email.transportKind, live: email.liveFor(tenant) },
+      deliveries: (await notifier.deliveries(tenant)).filter((d) => d.channel === 'email').slice(0, 40),
+    })
+  }))
+  app.put('/api/notifications/email', route(async (req, res, { tenant, actor }) => res.json({ preferences: await email.savePreferences(tenant, req.body ?? {}, actor) }), { admin: true }))
+  app.post('/api/notifications/email/test', route(async (req, res, { tenant, actor }) => {
+    const delivery = await email.sendTest(tenant, { actor })
+    res.status(delivery.status === 'sent' ? 200 : 502).json({ delivery })
+  }, { admin: true }))
+  app.get('/api/notifications/email/outbox', route(async (req, res, { tenant }) => res.json({ outbox: await email.outbox(tenant) }), { admin: true }))
+
   /* ---------- Notifications ---------- */
 
   app.get('/api/notifications', route(async (req, res, { tenant }) => {
@@ -397,5 +435,5 @@ export function mountPlatform(app, config, { fetchImpl = fetch } = {}) {
     res.status(delivery.status === 'sent' ? 200 : 502).json({ delivery, integration: await integrations.get(tenant, req.params.channel) })
   }, { write: true }))
 
-  return { store, integrations, approvals, notifier, catalogue: INTEGRATIONS, newToken: randomToken }
+  return { store, integrations, approvals, notifier, email, branding, catalogue: INTEGRATIONS, newToken: randomToken }
 }

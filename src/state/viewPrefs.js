@@ -7,30 +7,45 @@ import { useSyncExternalStore } from 'react'
 
 const KEY = 'waymark.viewPrefs.v1'
 
-/** Feature modules. Each one is a page, a navigation entry and a Command Center tile. */
+/**
+ * Feature modules. Each one is a page, a navigation entry and a Command Center tile.
+ * `group` is its navigation category. `entitlements` lists plan-gated capabilities inside the page:
+ * the page itself is available on every plan, and the server enforces the gated parts.
+ */
 export const FEATURES = [
-  { id: 'map', group: 'main', to: '/app/map', label: 'Supply Chain Map', icon: 'map', blurb: 'Suppliers, ports, warehouses and routes on one map.' },
-  { id: 'shipments', group: 'main', to: '/app/shipments', label: 'Shipments', icon: 'ship', blurb: 'Track, add and edit shipment records and events.' },
-  { id: 'simulator', group: 'main', to: '/app/simulator', label: 'Risk Simulator', icon: 'activity', blurb: 'Test disruptions and compare responses by cost and timing.' },
-  { id: 'canadian', group: 'main', to: '/app/canadian', label: 'Canadian Alternatives', icon: 'flag', blurb: 'Compare domestic suppliers for the same product.' },
-  { id: 'global', group: 'main', to: '/app/global', label: 'Global Alternatives', icon: 'globe', blurb: 'Compare sourcing countries side by side.' },
-  { id: 'sustainability', group: 'main', to: '/app/sustainability', label: 'Sustainability', icon: 'leaf', blurb: 'Transport emissions and responsible-sourcing records.' },
-  { id: 'reports', group: 'main', to: '/app/reports', label: 'Reports', icon: 'file', blurb: 'Build reports and export them as PDF or CSV.' },
   { id: 'agent', group: 'intelligence', to: '/app/agent', label: 'AI Agent Hub', icon: 'sparkles', blurb: 'Ask Waymark to investigate a problem. It runs the tools and shows its work.' },
+  { id: 'analyst', group: 'intelligence', to: '/app/analyst', label: 'AI Trade Analyst', icon: 'scale', blurb: 'Pick shipments, suppliers or headlines and ask how they affect you.' },
   { id: 'world', group: 'intelligence', to: '/app/world', label: 'Global Risk Intelligence', icon: 'newspaper', blurb: 'Disruption news and weather signals, matched to your records.' },
   { id: 'activity', group: 'intelligence', to: '/app/activity', label: 'Agent Activity', icon: 'compass', blurb: 'Automated monitoring, detected risks and investigation history.' },
   { id: 'approvals', group: 'intelligence', to: '/app/approvals', label: 'Approvals', icon: 'shield', blurb: 'Approve or reject anything Waymark proposes to send.' },
-  { id: 'analyst', group: 'intelligence', to: '/app/analyst', label: 'AI Trade Analyst', icon: 'scale', blurb: 'Pick shipments, suppliers or headlines and ask how they affect you.' },
+  { id: 'map', group: 'solutions', to: '/app/map', label: 'Supply Chain Map', icon: 'map', blurb: 'Suppliers, ports, warehouses and routes on one map.', entitlements: ['map.advanced'] },
+  { id: 'shipments', group: 'solutions', to: '/app/shipments', label: 'Shipments', icon: 'ship', blurb: 'Track, add and edit shipment records and events.', entitlements: ['tracking.live'] },
+  { id: 'simulator', group: 'solutions', to: '/app/simulator', label: 'Risk Simulator', icon: 'activity', blurb: 'Test disruptions and compare responses by cost and timing.', entitlements: ['scenario.advanced', 'scenario.compare'] },
+  { id: 'canadian', group: 'solutions', to: '/app/canadian', label: 'Canadian Alternatives', icon: 'flag', blurb: 'Compare domestic suppliers for the same product.', entitlements: ['alternatives.canadian.full', 'alternatives.saved'] },
+  { id: 'global', group: 'solutions', to: '/app/global', label: 'Global Alternatives', icon: 'globe', blurb: 'Compare sourcing countries side by side.', entitlements: ['alternatives.global.full', 'alternatives.saved'] },
+  { id: 'sustainability', group: 'solutions', to: '/app/sustainability', label: 'Sustainability', icon: 'leaf', blurb: 'Transport emissions and responsible-sourcing records.', entitlements: ['carbon.climatiq', 'sustainability.advanced', 'social.detailed'] },
+  { id: 'reports', group: 'solutions', to: '/app/reports', label: 'Reports', icon: 'file', blurb: 'Build reports and export them as PDF or CSV.', entitlements: ['reports.advanced', 'reports.custom'] },
+  { id: 'integrations', group: 'business', to: '/app/integrations', label: 'Integrations', icon: 'layers', blurb: 'Connect accounting, commerce, CRM, logistics and chat providers.' },
   { id: 'inventory', group: 'business', to: '/app/inventory', label: 'Inventory & Orders', icon: 'box', blurb: 'Stock, open orders and customers that depend on late supply.' },
   { id: 'finance', group: 'business', to: '/app/finance', label: 'Financial Intelligence', icon: 'card', blurb: 'Supplier spend from your books, beside your sourcing records.' },
 ]
 
-/** Navigation sections, in display order. */
+/** The Command Center. It is always on and is the only page in the Main category. */
+export const HOME = { id: 'home', group: 'main', to: '/app', end: true, label: 'Command Center', icon: 'home' }
+
+/** Navigation categories, in display order. */
 export const FEATURE_GROUPS = [
-  { id: 'main', label: 'Main' },
-  { id: 'intelligence', label: 'Intelligence' },
-  { id: 'business', label: 'Business' },
+  { id: 'main', label: 'Main', icon: 'home' },
+  { id: 'intelligence', label: 'Intelligence', icon: 'sparkles' },
+  { id: 'solutions', label: 'Solutions', icon: 'layers' },
+  { id: 'business', label: 'Business', icon: 'card' },
 ]
+
+/** The feature whose page is at `pathname`, or the Command Center. Deep links pick their category from this. */
+export function featureForPath(pathname) {
+  const path = pathname.replace(/\/+$/, '') || '/'
+  return FEATURES.find((f) => path === f.to || path.startsWith(`${f.to}/`)) ?? (path === '/app' ? HOME : null)
+}
 
 /** Blocks on the Command Center itself. */
 export const SECTIONS = [
@@ -39,7 +54,7 @@ export const SECTIONS = [
   { id: 'financeStats', label: 'Spend and footprint', blurb: 'Import spend, freight spend, emissions and sourcing share.' },
   { id: 'alerts', label: 'Risk feed', blurb: 'Rule-based prompts for review, with a Resolve action on delays.' },
   { id: 'activity', label: 'Activity feed', blurb: 'Needs the Shipments feature.' },
-  { id: 'featureTiles', label: 'Feature tiles', blurb: 'The shortcut tiles that open each feature.' },
+  { id: 'featureTiles', label: 'Enabled capabilities', blurb: 'Features turned on, by category, with links. Integration and AI status shown separately.' },
 ]
 
 export const VEHICLES = [
@@ -52,12 +67,16 @@ export const VEHICLES = [
 const allOn = (list) => Object.fromEntries(list.map((x) => [x.id, true]))
 
 export const TEXT_SIZES = [100, 115, 130, 150]
-export const DEFAULT_PREFS = { features: allOn(FEATURES), sections: allOn(SECTIONS), vehicle: 'ship', textSize: 100, speechRate: 1, theme: 'dark' }
+export const LANGUAGE_CODES = ['en', 'hi', 'ar', 'zh-CN', 'es', 'fr']
+export const DEFAULT_PREFS = { features: allOn(FEATURES), sections: allOn(SECTIONS), vehicle: 'ship', textSize: 100, speechRate: 1, theme: 'dark', language: 'en', reduceMotion: false, readAloudButton: false }
 
 function merge(stored) {
   return {
     textSize: TEXT_SIZES.includes(stored?.textSize) ? stored.textSize : 100,
     theme: stored?.theme === 'light' ? 'light' : 'dark',
+    language: LANGUAGE_CODES.includes(stored?.language) ? stored.language : 'en',
+    reduceMotion: stored?.reduceMotion === true,
+    readAloudButton: stored?.readAloudButton === true,
     speechRate: [0.75, 1, 1.25, 1.5].includes(stored?.speechRate) ? stored.speechRate : 1,
     features: { ...DEFAULT_PREFS.features, ...stored?.features },
     sections: { ...DEFAULT_PREFS.sections, ...stored?.sections },
@@ -75,11 +94,20 @@ function read() {
 
 let current = typeof localStorage === 'undefined' ? DEFAULT_PREFS : read()
 const listeners = new Set()
+// The i18n module registers here, so a language change reaches it without a circular import.
+const languageListeners = new Set()
+export function onLanguagePref(fn) {
+  languageListeners.add(fn)
+  fn(current.language)
+  return () => languageListeners.delete(fn)
+}
 function applySize() {
   if (typeof document === 'undefined') return
   document.documentElement.style.fontSize = `${current.textSize}%`
   // The workspace theme. Only .wm-app screens read it, so the marketing site is unaffected.
   document.documentElement.dataset.wmTheme = current.theme
+  document.documentElement.dataset.wmReduceMotion = current.reduceMotion ? 'true' : 'false'
+  languageListeners.forEach((fn) => fn(current.language))
 }
 applySize()
 
@@ -119,6 +147,9 @@ export function useViewPrefs() {
     setSection: (id, on) => write({ ...current, sections: { ...current.sections, [id]: on } }),
     setVehicle: (vehicle) => write({ ...current, vehicle }),
     setTheme: (theme) => write({ ...current, theme: theme === 'light' ? 'light' : 'dark' }),
+    setLanguage: (language) => write({ ...current, language: LANGUAGE_CODES.includes(language) ? language : 'en' }),
+    setReduceMotion: (reduceMotion) => write({ ...current, reduceMotion: Boolean(reduceMotion) }),
+    setReadAloudButton: (readAloudButton) => write({ ...current, readAloudButton: Boolean(readAloudButton) }),
     reset: () => write(DEFAULT_PREFS),
   }
 }

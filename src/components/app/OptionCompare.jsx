@@ -47,7 +47,7 @@ export function CompareTable({ current, options }) {
       <table className="w-full min-w-[44rem] text-sm" data-testid="compare-table">
         <caption className="sr-only">Sourcing option comparison</caption>
         <thead>
-          <tr className="border-b border-slate-200 text-left align-bottom">
+          <tr className="border-b border-slate-200 text-start align-bottom">
             <td />
             {all.map((o) => (
               <th key={o.id} scope="col" className="min-w-40 px-2 py-2 font-bold text-navy">
@@ -60,7 +60,7 @@ export function CompareTable({ current, options }) {
         <tbody>
           {rows.map(([label, render]) => (
             <tr key={label} className="border-b border-slate-100 align-top">
-              <th scope="row" className="py-1.5 pr-2 text-left font-medium whitespace-nowrap text-slate-500">{label}</th>
+              <th scope="row" className="py-1.5 pe-2 text-start font-medium whitespace-nowrap text-slate-500">{label}</th>
               {all.map((o) => (
                 <td key={o.id} className="px-2 py-1.5 text-slate-800">{render(o)}</td>
               ))}
@@ -103,7 +103,7 @@ export function Recommendation({ current, options, basis }) {
       <div className="max-w-xs"><SelectInput label="What matters most?" placeholder={null} value={priority} onChange={setPriority} options={PRIORITIES.map((p) => ({ value: p.id, label: p.label }))} /></div>
       <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5" data-testid="recommendation">
         <p className="text-sm font-bold text-emerald-900">Highest score: {result.best.name} <span className="font-medium">({Math.round(result.best.score * 100)}/100)</span></p>
-        <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm text-emerald-950">
+        <ul className="mt-1.5 list-disc space-y-1 ps-5 text-sm text-emerald-950">
           {result.explanation.map((line) => <li key={line}>{line}</li>)}
         </ul>
       </div>
@@ -112,19 +112,19 @@ export function Recommendation({ current, options, basis }) {
         <table className="w-full min-w-[32rem] text-sm">
           <caption className="sr-only">Ranked options</caption>
           <thead>
-            <tr className="border-b border-slate-200 text-left text-xs tracking-wide text-slate-500 uppercase">
-              <th scope="col" className="py-1.5 pr-2">Option</th>
-              <th scope="col" className="py-1.5 pr-2 text-right">Score</th>
-              <th scope="col" className="py-1.5 pr-2">Criteria compared</th>
+            <tr className="border-b border-slate-200 text-start text-xs tracking-wide text-slate-500 uppercase">
+              <th scope="col" className="py-1.5 pe-2">Option</th>
+              <th scope="col" className="py-1.5 pe-2 text-end">Score</th>
+              <th scope="col" className="py-1.5 pe-2">Criteria compared</th>
               <th scope="col" className="py-1.5">Unknown</th>
             </tr>
           </thead>
           <tbody>
             {result.ranked.map((o) => (
               <tr key={o.id} className="border-b border-slate-100 align-top">
-                <th scope="row" className="py-1.5 pr-2 text-left font-semibold text-navy">{o.name}</th>
-                <td className="py-1.5 pr-2 text-right tabular-nums">{Math.round(o.score * 100)}</td>
-                <td className="py-1.5 pr-2 text-slate-600">{o.breakdown.length} of 8</td>
+                <th scope="row" className="py-1.5 pe-2 text-start font-semibold text-navy">{o.name}</th>
+                <td className="py-1.5 pe-2 text-end tabular-nums">{Math.round(o.score * 100)}</td>
+                <td className="py-1.5 pe-2 text-slate-600">{o.breakdown.length} of 8</td>
                 <td className="py-1.5 text-slate-600">{o.unknown.join(', ') || 'None'}</td>
               </tr>
             ))}
@@ -145,7 +145,7 @@ export function Recommendation({ current, options, basis }) {
 
       <details className="mt-3 text-xs text-slate-600">
         <summary className="cursor-pointer font-medium">Limitations of this recommendation</summary>
-        <ul className="mt-1 list-disc space-y-0.5 pl-5">{result.limitations.map((l) => <li key={l}>{l}</li>)}</ul>
+        <ul className="mt-1 list-disc space-y-0.5 ps-5">{result.limitations.map((l) => <li key={l}>{l}</li>)}</ul>
       </details>
     </Card>
   )

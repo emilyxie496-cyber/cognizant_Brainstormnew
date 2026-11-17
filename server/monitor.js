@@ -97,7 +97,7 @@ export async function detectRisks(ctx, settings) {
   return { errors, risks: found.map((f) => ({ ...f, shipmentRefs: f.shipmentIds.map((id) => refs.get(id)).filter(Boolean) })) }
 }
 
-export function createMonitor({ store, investigate, channelsFor }) {
+export function createMonitor({ store, investigate, channelsFor, notify = {} }) {
   const running = new Set()
   const snapshots = new Map() // tenant -> a function that rebuilds the context, for scheduled runs. Memory only.
 
@@ -139,7 +139,10 @@ export function createMonitor({ store, investigate, channelsFor }) {
         const overThreshold = cost != null && settings.costThresholdCad > 0 && cost >= settings.costThresholdCad
         await store.put(tenant, 'risk_alerts', { ...alert, runId: result.id, approvalIds: result.approvalIds, costImpactCad: cost, overCostThreshold: overThreshold, level: overThreshold ? 'high' : alert.level, recommendation: result.result?.recommendations?.[0] ?? null })
         investigations.push({ alertId: alert.id, runId: result.id, status: result.status, approvals: result.approvalIds.length })
+        await notify.investigation?.(tenant, alert, result)
       }
+      // Email alerts for each new alert, read back after investigation so the level reflects the cost threshold.
+      for (const alert of fresh) await notify.alert?.(tenant, (await store.get(tenant, 'risk_alerts', alert.id)) ?? alert, ctx)
 
       const next = { ...state, lastRunAt: startedAt, lastSuccessAt: new Date().toISOString(), lastError: errors.length ? errors.join(' ') : null, runs: (state.runs ?? 0) + 1, lastSummary: { detected: risks.length, new: fresh.length, investigated: investigations.length, trigger } }
       await store.put(tenant, 'platform_settings', next)
@@ -148,6 +151,7 @@ export function createMonitor({ store, investigate, channelsFor }) {
       console.error('[monitor]', err.message)
       const next = { ...state, lastRunAt: startedAt, lastError: 'The monitoring run failed before it could finish.', runs: (state.runs ?? 0) + 1 }
       await store.put(tenant, 'platform_settings', next)
+      await notify.failure?.(tenant, next.lastError)
       return { state: next, detected: 0, newAlerts: 0, investigations: [], errors: [next.lastError] }
     } finally {
       running.delete(tenant)

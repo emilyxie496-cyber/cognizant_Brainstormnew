@@ -91,7 +91,7 @@ export default function ActivityFeed({ limit = 8, onOpenShipment }) {
             {weather.alerts.map((a) => (
               <li key={a.id} className="text-sm text-slate-800">
                 {a.message}
-                <span className="ml-1"><Badge tone="amber">Potential disruption</Badge></span>
+                <span className="ms-1"><Badge tone="amber">Potential disruption</Badge></span>
                 <br />
                 <SourceLine source={a.source} at={a.at} />
               </li>
@@ -118,11 +118,11 @@ export default function ActivityFeed({ limit = 8, onOpenShipment }) {
               <span className="min-w-0">
                 <span className="text-xs font-semibold tracking-wide text-slate-500 uppercase">{EVENT_LABELS[e.type] ?? 'Update'}</span>
                 {onOpenShipment && references.has(e.shipmentId) && (
-                  <button type="button" onClick={() => onOpenShipment(e.shipmentId)} className="ml-2 text-xs font-semibold text-brand-800 hover:underline">{references.get(e.shipmentId)}</button>
+                  <button type="button" onClick={() => onOpenShipment(e.shipmentId)} className="ms-2 text-xs font-semibold text-brand-800 hover:underline">{references.get(e.shipmentId)}</button>
                 )}
                 <br />
                 <span className="text-slate-800">{e.message}</span>
-                {e.simulated && <span className="ml-1"><Badge tone="amber">Simulated</Badge></span>}
+                {e.simulated && <span className="ms-1"><Badge tone="amber">Simulated</Badge></span>}
                 <br />
                 <SourceLine source={e.source} at={e.at} />
               </span>

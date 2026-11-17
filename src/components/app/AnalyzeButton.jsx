@@ -79,7 +79,7 @@ export function AnalystDock() {
         e.preventDefault()
         addTo(data.type, data.id, data.extra)
       }}
-      className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-4 z-30 flex items-center gap-2 rounded-full bg-brand-700 py-2.5 pr-4 pl-3 text-sm font-semibold text-white shadow-lg shadow-black/40 hover:bg-brand-600 print:hidden"
+      className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] start-4 z-30 flex items-center gap-2 rounded-full bg-brand-700 py-2.5 pe-4 ps-3 text-sm font-semibold text-white shadow-lg shadow-black/40 hover:bg-brand-600 print:hidden"
     >
       <Icon name="sparkles" className="h-5 w-5" />
       AI Analyst

@@ -39,7 +39,7 @@ export function createApp(config) {
   const app = express()
   app.disable('x-powered-by')
   // Routes that carry a workspace snapshot or a signed webhook body bring their own parser, registered ahead of this one.
-  const ownParser = /^\/api\/(agent\/run|monitor\/run|integrations\/[^/]+\/(demo|sync)|webhooks\/)/
+  const ownParser = /^\/api\/(agent\/run|monitor\/run|branding$|integrations\/[^/]+\/(demo|sync)|webhooks\/)/
   const smallJson = express.json({ limit: '256kb' })
   app.use((req, res, next) => (ownParser.test(req.path) ? next() : smallJson(req, res, next)))
 

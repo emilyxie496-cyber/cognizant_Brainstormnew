@@ -90,9 +90,9 @@ export function HsCodeField({ product, industry, onChange }) {
           <ul className="mt-1 space-y-1">
             {suggestions.map((s) => (
               <li key={s.code}>
-                <button type="button" onClick={() => onChange({ hsCode: s.code, hsStatus: 'unverified' })} className="w-full rounded-md px-1.5 py-1 text-left text-xs text-slate-700 hover:bg-white">
+                <button type="button" onClick={() => onChange({ hsCode: s.code, hsStatus: 'unverified' })} className="w-full rounded-md px-1.5 py-1 text-start text-xs text-slate-700 hover:bg-white">
                   <span className="font-semibold text-navy tabular-nums">{s.code}</span> {s.description}
-                  {s.confidence === 'weak' && <span className="ml-1 text-amber-700">(weak match)</span>}
+                  {s.confidence === 'weak' && <span className="ms-1 text-amber-700">(weak match)</span>}
                 </button>
               </li>
             ))}
@@ -141,7 +141,7 @@ export function SupplierEditor({ supplier, products, warehouses, onChange, onRem
   return (
     <fieldset className="rounded-xl border border-slate-200" data-testid="supplier-form">
       <div className="flex items-center justify-between gap-2 px-3.5 py-2.5">
-        <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex min-w-0 items-center gap-2 text-left">
+        <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex min-w-0 items-center gap-2 text-start">
           <Icon name="chevronDown" className={`h-4 w-4 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
           <span className="truncate text-sm font-bold text-navy">{supplier.name || `Supplier ${index + 1}`}</span>
         </button>

@@ -194,7 +194,7 @@ export default function Onboarding() {
                 disabled={i > draft.step}
                 onClick={() => go(i)}
                 aria-current={i === draft.step ? 'step' : undefined}
-                className="w-full text-left disabled:cursor-not-allowed"
+                className="w-full text-start disabled:cursor-not-allowed"
               >
                 <span className={`block h-1.5 rounded-full ${i <= draft.step ? 'bg-brand-700' : 'bg-slate-300'}`} />
                 <span className={`mt-1 hidden text-xs font-medium sm:block ${i === draft.step ? 'text-brand-800' : 'text-slate-500'}`}>{label}</span>

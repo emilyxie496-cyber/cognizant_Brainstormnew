@@ -4,12 +4,14 @@ import { formatCo2e } from '../../../shared/emissions.js'
 import { checkLimit } from '../../../shared/entitlements.js'
 import ActivityFeed from '../../components/app/ActivityFeed.jsx'
 import AnalyzeButton from '../../components/app/AnalyzeButton.jsx'
+import AiLauncher from '../../components/app/AiLauncher.jsx'
 import CommandHero from '../../components/app/CommandHero.jsx'
+import EnabledCapabilities from '../../components/app/EnabledCapabilities.jsx'
 import { DemoTag, MethodTag, Modal, Notice, ProvenanceTag, formatDate } from '../../components/app/kit.jsx'
 import ShipmentDetail from '../../components/app/ShipmentDetail.jsx'
 import { Icon, LevelChip } from '../../components/ui.jsx'
 import { delayDecision } from '../../engine/delayPlan.js'
-import { FEATURES, useViewPrefs } from '../../state/viewPrefs.js'
+import { useViewPrefs } from '../../state/viewPrefs.js'
 import { useWorkspace } from '../../state/WorkspaceContext.jsx'
 import { moneyCompact } from '../../utils/format.js'
 
@@ -55,22 +57,6 @@ function Kpi({ label, value, sub, icon, tone = 'default', tag }) {
   )
 }
 
-function FeatureTile({ to, label, icon, blurb }) {
-  return (
-    <Link to={to} aria-label={label} className="wm-tile group flex min-w-0 items-start gap-3.5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:border-brand-500 focus-visible:outline-2 focus-visible:outline-brand-500">
-      <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-300">
-        <Icon name={icon} className="h-6 w-6" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-bold tracking-wide text-navy uppercase">{label}</span>
-        <span className="mt-1 block text-sm text-slate-600">{blurb}</span>
-      </span>
-      <Icon name="arrowRight" className="mt-1 h-4 w-4 shrink-0 text-slate-500 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-300" />
-    </Link>
-  )
-}
-
-/** A compact card whose heading stays put while its body scrolls on its own. */
 function FeedCard({ id, title, subtitle, count, children }) {
   return (
     <section id={id} data-tour={id === 'alerts' ? 'risk-feed' : undefined} className="flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -110,7 +96,7 @@ function RiskFeed({ onOpenShipment }) {
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-slate-500">
               {shipment && <button type="button" onClick={() => onOpenShipment(shipment.id)} className="font-semibold text-brand-800 hover:underline">{shipment.reference}{shipment.supplier ? ` · ${shipment.supplier.name}` : ''}</button>}
               <span>{since ? `Recorded ${formatDate(since)}` : 'Current, recalculated live'}</span>
-              <span className="ml-auto flex flex-wrap gap-1.5">
+              <span className="ms-auto flex flex-wrap gap-1.5">
                 {isDelay && prefs.features.shipments && (
                   <Link data-tour="delay-resolve" to={`/app/shipments/${shipment.id}/resolve`} className="inline-flex min-h-8 items-center rounded-lg bg-brand-700 px-2.5 py-1 text-sm font-semibold text-white hover:bg-brand-600">
                     {decision ? 'Review' : 'Resolve'}
@@ -137,7 +123,6 @@ export default function Overview() {
 
   const show = prefs.sections
   const showActivity = show.activity && prefs.features.shipments
-  const tiles = FEATURES.filter((f) => prefs.features[f.id])
   const nothingShown = !Object.values(show).some(Boolean)
 
   const overSuppliers = checkLimit(plan, 'suppliers', counts.suppliers, 0)
@@ -166,6 +151,9 @@ export default function Overview() {
           This plan includes {overSuppliers.limit} suppliers and {overShipments.limit} shipment records. You have {counts.suppliers} and {counts.shipments}. All your data is kept, but adding more is paused. <Link to="/pricing" className="font-semibold underline">Compare plans</Link>
         </Notice>
       )}
+      <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+        <AiLauncher task="Prepare a supply-chain risk summary for my team: my most at-risk shipments, why, and what to do next." context={[`${m.activeShipments} active shipments`, `${m.delayedShipments} delayed`, `${model.alerts.length} current risk alerts`]} />
+      </div>
       {model.fxIssues.map((issue) => <Notice key={issue} tone="warn" className="mb-2">{issue}</Notice>)}
       {!fx.live && <Notice tone="info" className="mb-3">Live exchange rates are unavailable. Using a dated Bank of Canada snapshot from {fx.asOf}.</Notice>}
 
@@ -231,12 +219,9 @@ export default function Overview() {
       )}
 
       {show.featureTiles && (
-        <>
-          <SectionTitle>What would you like to do?</SectionTitle>
-          <nav aria-label="Application" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {tiles.map((f) => <FeatureTile key={f.id} {...f} />)}
-          </nav>
-        </>
+        <div className="mt-6">
+          <EnabledCapabilities />
+        </div>
       )}
 
       <Modal open={Boolean(shipment)} onClose={() => setSelected(null)} title="Shipment details">

@@ -7,13 +7,14 @@
   cannot introduce a number. Without AI the same findings are written out by
   the rule-based answer, so the page always works.
 */
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { COUNTRIES } from '../../../shared/countries.js'
 import { formatCo2e } from '../../../shared/emissions.js'
 import { findPlace } from '../../../shared/places.js'
 import { useAddToAnalyst } from '../../components/app/AnalyzeButton.jsx'
-import { Card, DemoTag, Notice, PageHeader, ProvenanceTag, SelectInput, Spinner, formatDate } from '../../components/app/kit.jsx'
+import { Card, CompactPageHeader, DemoTag, Notice, PageHeader, ProvenanceTag, SectionTabs, SelectInput, Spinner, formatDate } from '../../components/app/kit.jsx'
+import ReportAction from '../../components/app/ReportAction.jsx'
 import { Badge, Button, Icon } from '../../components/ui.jsx'
 import { ITEM_TYPES, aiFindings, buildFindings, nextSteps, ruleAnswer, suggestedQuestions } from '../../engine/analyst.js'
 import { api } from '../../services/api.js'
@@ -199,7 +200,7 @@ function ImpactPanel({ findings, hasItems }) {
         <ul className="space-y-1.5">
           {steps.map((s) => (
             <li key={s.label} className="text-sm">
-              {s.to ? <button type="button" onClick={() => go(s)} className="inline-flex items-start gap-1 text-left font-semibold text-brand-800 hover:underline">{s.label} <Icon name="arrowRight" className="mt-0.5 h-4 w-4 shrink-0" /></button> : <span className="text-slate-700">{s.label}</span>}
+              {s.to ? <button type="button" onClick={() => go(s)} className="inline-flex items-start gap-1 text-start font-semibold text-brand-800 hover:underline">{s.label} <Icon name="arrowRight" className="mt-0.5 h-4 w-4 shrink-0" /></button> : <span className="text-slate-700">{s.label}</span>}
             </li>
           ))}
         </ul>
@@ -256,61 +257,94 @@ export default function Analyst() {
     say({ role: 'assistant', text: 'Stopped. Ask again when you are ready.', by: 'rules' })
   }
 
-  return (
-    <div>
-      <PageHeader title="AI Trade Analyst" badge={isDemo && <DemoTag />}>
-        Pick shipments, suppliers, headlines or places, then ask how they could affect your business. Figures come from your records and Waymark's calculations, never from the AI.
-      </PageHeader>
-      {health && !aiReady && <Notice tone="info" className="mb-3">No AI provider is set up, so answers are written from your records by fixed rules. Everything on this page still works.</Notice>}
-
-      <div className="grid items-start gap-3 lg:grid-cols-[19rem_minmax(0,1fr)] 2xl:grid-cols-[19rem_minmax(0,1fr)_22rem]">
-        <ContextPanel />
-
-        <Card title="Conversation" aside={messages.length > 0 && <button type="button" onClick={clearChat} className="text-sm font-semibold text-brand-800 hover:underline">Clear chat</button>} className="min-w-0">
-          <div className="wm-scroll max-h-[32rem] min-h-40 space-y-3 overflow-y-auto overscroll-contain pr-1" role="log" aria-live="polite" aria-label="Conversation">
-            {!messages.length && <p className="text-sm text-slate-600">Ask a question, or start with one of the suggestions below.</p>}
-            {messages.map((m) => (
-              <div key={m.id} className={m.role === 'user' ? 'ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-brand-700 px-3.5 py-2.5 text-sm text-white' : 'max-w-[92%] rounded-2xl rounded-bl-md border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800'}>
-                {m.role === 'assistant' && <p className="mb-1 flex flex-wrap gap-1"><Badge tone={m.by === 'ai' ? 'brand' : 'slate'}>{m.by === 'ai' ? 'AI wording, figures checked' : 'Rule-based answer'}</Badge></p>}
-                {m.note && <p className="mb-1.5 text-xs text-amber-800">{m.note}</p>}
-                {m.text.split('\n\n').map((p, i) => <p key={i} className={i ? 'mt-2' : ''}>{p}</p>)}
-                {m.check && (
-                  <details className="mt-2 text-xs text-slate-600">
-                    <summary className="cursor-pointer font-semibold text-brand-800">Show the rule-based answer it was written from</summary>
-                    {m.check.split('\n\n').map((p, i) => <p key={i} className="mt-1.5">{p}</p>)}
-                  </details>
-                )}
-              </div>
-            ))}
-            {busy && <div className="flex items-center gap-3"><Spinner label="Analysing" /><button type="button" onClick={cancel} className="text-sm font-semibold text-brand-800 hover:underline">Stop</button></div>}
+  const buildReport = () => ({
+    title: 'AI Trade Analyst conversation',
+    typeId: 'analyst',
+    context: { heading: 'Context items', lines: items.map((i) => `${i.type}: ${i.label ?? i.title ?? i.id}`) },
+    sections: [
+      { heading: 'Conversation', paragraphs: messages.map((m) => `${m.role === 'user' ? 'Question' : m.by === 'ai' ? 'Answer (AI wording, figures checked)' : 'Answer (rule-based)'}: ${m.text}`) },
+      { heading: 'Assumptions and limitations', bullets: ['Figures come from company records and Waymark calculations, never from the AI.', 'Analysis is not advice and does not approve, book or send anything.'] },
+    ],
+    sources: [{ label: 'Company records', detail: isDemo ? 'Fictional demo data' : 'Entered by your company' }],
+  })
+  const wide = useMedia('(min-width: 80rem)')
+  const conversation = (
+    <Card title="Conversation" aside={messages.length > 0 && <span className="flex items-center gap-2"><ReportAction build={buildReport} /><button type="button" onClick={clearChat} className="text-sm font-semibold text-brand-800 hover:underline">Clear chat</button></span>} className="flex min-w-0 flex-col">
+      <div className="wm-scroll h-[min(32rem,calc(100dvh-22rem))] min-h-56 space-y-3 overflow-y-auto overscroll-contain pe-1" role="log" aria-live="polite" aria-label="Conversation" tabIndex={0}>
+        {!messages.length && <p className="text-sm text-slate-600">Ask a question, or start with one of the suggestions below.</p>}
+        {messages.map((m) => (
+          <div key={m.id} className={m.role === 'user' ? 'ms-auto max-w-[85%] rounded-2xl rounded-ee-md bg-brand-700 px-3.5 py-2.5 text-sm text-white' : 'max-w-[92%] rounded-2xl rounded-es-md border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800'}>
+            {m.role === 'assistant' && <p className="mb-1 flex flex-wrap gap-1"><Badge tone={m.by === 'ai' ? 'brand' : 'slate'}>{m.by === 'ai' ? 'AI wording, figures checked' : 'Rule-based answer'}</Badge></p>}
+            {m.note && <p className="mb-1.5 text-xs text-amber-800">{m.note}</p>}
+            {m.text.split('\n\n').map((p, i) => <p key={i} className={i ? 'mt-2' : ''}>{p}</p>)}
+            {m.check && (
+              <details className="mt-2 text-xs text-slate-600">
+                <summary className="cursor-pointer font-semibold text-brand-800">Show the rule-based answer it was written from</summary>
+                {m.check.split('\n\n').map((p, i) => <p key={i} className="mt-1.5">{p}</p>)}
+              </details>
+            )}
           </div>
-
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {suggestedQuestions(items).map((q) => (
-              <button key={q} type="button" disabled={busy} onClick={() => ask(q)} className="rounded-full border border-slate-200 px-3 py-1.5 text-left text-xs font-medium text-slate-700 hover:border-brand-400 disabled:opacity-50">{q}</button>
-            ))}
-          </div>
-
-          <form className="mt-3 flex items-end gap-2" onSubmit={(e) => { e.preventDefault(); ask(question) }}>
-            <label className="min-w-0 flex-1">
-              <span className="sr-only">Your question</span>
-              <textarea
-                rows={2}
-                maxLength={600}
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(question) } }}
-                placeholder="Ask how this could affect your business"
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-500 focus:border-brand-500 focus:outline-none"
-              />
-            </label>
-            <Button type="submit" disabled={busy || question.trim().length < 3}><Icon name="arrowRight" className="h-4 w-4" /> Send</Button>
-          </form>
-          <p className="mt-1.5 text-xs text-slate-500">Analysis is not advice and does not approve, book or send anything. Only the items in the context and the figures in the impact panel are shared with the AI provider.</p>
-        </Card>
-
-        <div className="lg:col-span-2 2xl:col-span-1"><ImpactPanel findings={findings} hasItems={items.length > 0} /></div>
+        ))}
+        {busy && <div className="flex items-center gap-3"><Spinner label="Analysing" /><button type="button" onClick={cancel} className="text-sm font-semibold text-brand-800 hover:underline">Stop</button></div>}
       </div>
+
+      <div className="wm-strip mt-3 flex gap-1.5 overflow-x-auto pb-1">
+        {suggestedQuestions(items).map((q) => (
+          <button key={q} type="button" disabled={busy} onClick={() => ask(q)} className="shrink-0 rounded-full border border-slate-200 px-3 py-1.5 text-start text-xs font-medium whitespace-nowrap text-slate-700 hover:border-brand-400 disabled:opacity-50">{q}</button>
+        ))}
+      </div>
+
+      <form className="mt-2 flex items-end gap-2" onSubmit={(e) => { e.preventDefault(); ask(question) }}>
+        <label className="min-w-0 flex-1">
+          <span className="sr-only">Your question</span>
+          <textarea
+            rows={2}
+            maxLength={600}
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(question) } }}
+            placeholder="Ask how this could affect your business"
+            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-500 focus:border-brand-500 focus:outline-none"
+          />
+        </label>
+        <Button type="submit" disabled={busy || question.trim().length < 3}><Icon name="arrowRight" className="h-4 w-4 rtl:rotate-180" /> Send</Button>
+      </form>
+      <p className="mt-1.5 text-xs text-slate-500">Analysis is not advice and does not approve, book or send anything. Only the items in the context and the figures in the impact panel are shared with the AI provider.</p>
+    </Card>
+  )
+
+  return (
+    <div className="space-y-3">
+      <CompactPageHeader title="AI Trade Analyst" badge={isDemo && <DemoTag />} description="Pick shipments, suppliers, headlines or places, then ask how they could affect you. Figures come from your records and Waymark’s calculations, never from the AI." />
+      {health && !aiReady && <Notice tone="info">No AI provider is set up, so answers are written from your records by fixed rules. Everything on this page still works.</Notice>}
+
+      {wide ? (
+        <div className="grid items-start gap-3 grid-cols-[17rem_minmax(0,1fr)_20rem]">
+          <div className="wm-scroll sticky top-32 max-h-[calc(100dvh-9rem)] overflow-y-auto"><ContextPanel /></div>
+          {conversation}
+          <div className="wm-scroll sticky top-32 max-h-[calc(100dvh-9rem)] overflow-y-auto"><ImpactPanel findings={findings} hasItems={items.length > 0} /></div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {conversation}
+          <SectionTabs idPrefix="analyst" label="Context and impact" tabs={[
+            { id: 'context', label: 'Context', count: items.length, content: <ContextPanel /> },
+            { id: 'impact', label: 'Business impact', content: <ImpactPanel findings={findings} hasItems={items.length > 0} /> },
+          ]} />
+        </div>
+      )}
     </div>
   )
+}
+
+/** True while the media query matches. */
+function useMedia(query) {
+  const [match, setMatch] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches)
+  useEffect(() => {
+    const mq = window.matchMedia(query)
+    const on = () => setMatch(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [query])
+  return match
 }

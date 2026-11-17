@@ -167,6 +167,16 @@ export const NOTIFICATION_CATEGORIES = [
   { id: 'investigation_complete', label: 'Agent investigation completed' },
 ]
 
+/**
+ * Email alerts use every notification category, plus two internal workflow events that only
+ * go to a company's own authorized recipients. Agents cannot draft these.
+ */
+export const EMAIL_CATEGORIES = [
+  ...NOTIFICATION_CATEGORIES,
+  { id: 'pending_approval', label: 'Approval waiting for a decision' },
+  { id: 'monitoring_failure', label: 'Monitoring run failed' },
+]
+
 /** The newest quarterly Shopify Admin API version that has been released by `now`. */
 export function shopifyApiVersion(now = new Date()) {
   const quarter = Math.floor(now.getUTCMonth() / 3) * 3 + 1

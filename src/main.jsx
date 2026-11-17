@@ -5,6 +5,8 @@ import { BrowserRouter } from 'react-router-dom'
 import '@fontsource-variable/inter'
 import '@fontsource-variable/manrope'
 import './index.css'
+// Interface translations. Loaded before the app so the saved language applies on first paint.
+import './i18n/index.js'
 import App from './App.jsx'
 
 createRoot(document.getElementById('root')).render(

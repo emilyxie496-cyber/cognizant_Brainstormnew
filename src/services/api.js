@@ -132,6 +132,12 @@ export const platform = {
   notifications: () => request('/notifications'),
   saveNotifications: (channel, changes) => put(`/notifications/${channel}`, changes),
   testNotification: (channel) => post(`/notifications/${channel}/test`),
+  branding: () => request('/branding'),
+  saveBranding: (changes) => put('/branding', changes),
+  emailSettings: () => request('/notifications/email'),
+  saveEmailSettings: (changes) => put('/notifications/email', changes),
+  testEmail: () => post('/notifications/email/test'),
+  emailOutbox: () => request('/notifications/email/outbox'),
 }
 
 export const api = {

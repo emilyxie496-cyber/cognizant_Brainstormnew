@@ -35,7 +35,7 @@ export default function ShipmentDetail({ shipment: s }) {
         <h3 className="text-lg font-bold text-navy">{s.reference}</h3>
         <Badge tone={s.status === 'delayed' ? 'rose' : 'slate'}>{statusLabel(s.status)}</Badge>
         {s.dataSource === 'demo' && <DemoTag />}
-        <AnalyzeButton type="shipment" id={s.id} className="ml-auto" />
+        <AnalyzeButton type="shipment" id={s.id} className="ms-auto" />
       </div>
       {s.status === 'delayed' && !decision && (
         <Notice tone="warn" className="mt-2">

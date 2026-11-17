@@ -17,7 +17,7 @@ function FigureTable({ rows, label }) {
     <details className="mt-1 text-xs text-slate-600">
       <summary className="cursor-pointer">View as table</summary>
       <table className="mt-1 w-full"><caption className="sr-only">{label}</caption>
-        <tbody>{rows.map((r) => <tr key={r.name} className="border-b border-slate-100"><th scope="row" className="py-0.5 text-left font-normal">{r.label ?? r.name}</th><td className="py-0.5 text-right tabular-nums">{formatCo2e(r.kg)}</td></tr>)}</tbody>
+        <tbody>{rows.map((r) => <tr key={r.name} className="border-b border-slate-100"><th scope="row" className="py-0.5 text-start font-normal">{r.label ?? r.name}</th><td className="py-0.5 text-end tabular-nums">{formatCo2e(r.kg)}</td></tr>)}</tbody>
       </table>
     </details>
   )

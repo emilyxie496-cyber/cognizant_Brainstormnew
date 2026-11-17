@@ -40,12 +40,8 @@ const FinancialIntelligence = lazy(() => import('./pages/app/FinancialIntelligen
 
 const ROUTED_DIALOGS = { signIn: '/signin', signUp: '/signup', pricing: '/pricing' }
 
-function IntegrationsRedirect() {
-  const { search } = useLocation()
-  const params = new URLSearchParams(search)
-  params.set('tab', 'integrations')
-  return <Navigate to={`/app/settings?${params}`} replace />
-}
+/** The full Integrations marketplace. Settings → Integrations is the compact status summary. */
+const IntegrationsPage = lazy(() => import('./pages/app/Integrations.jsx'))
 
 /** Navigation shared by the marketing pages, which take callbacks rather than links. */
 function useSiteNav() {
@@ -151,7 +147,7 @@ export default function App() {
               <Route path="agent" element={<Agent />} />
               <Route path="activity" element={<Activity />} />
               <Route path="approvals" element={<Approvals />} />
-              <Route path="integrations" element={<IntegrationsRedirect />} />
+              <Route path="integrations" element={<IntegrationsPage />} />
               <Route path="inventory" element={<Inventory />} />
               <Route path="finance" element={<FinancialIntelligence />} />
               <Route path="simulator" element={<Simulator />} />

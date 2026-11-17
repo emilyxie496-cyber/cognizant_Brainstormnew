@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import AiLauncher from '../../components/app/AiLauncher.jsx'
 import { Link, useNavigate } from 'react-router-dom'
 import { SOURCES, countryName } from '../../../shared/countries.js'
 import { formatCo2e } from '../../../shared/emissions.js'
@@ -193,7 +194,7 @@ export function CanadianAlternatives() {
 
   return (
     <div>
-      <PageHeader title="Find Canadian Alternatives" badge={isDemo && <DemoTag />} actions={lane && <Button onClick={() => setAdding({})}><Icon name="plus" className="h-4 w-4" /> Add a lead</Button>}>
+      <PageHeader title="Find Canadian Alternatives" badge={isDemo && <DemoTag />} actions={<><AiLauncher task="Find Canadian alternative suppliers that reduce cost without increasing delivery risk." context={['Canadian Alternatives']} />{lane && <Button onClick={() => setAdding({})}><Icon name="plus" className="h-4 w-4" /> Add a lead</Button>}</>}>
         Investigate whether imported products could come from Canadian manufacturers, wholesalers or distributors. Nothing here is invented: unknown prices show as Request Quote.
       </PageHeader>
       {isDemo && <Notice tone="info" className="mb-3">Leads in this demo are fictional examples. A real workspace shows only leads you add or public records you save.</Notice>}
@@ -291,7 +292,7 @@ export function GlobalAlternatives() {
 
   return (
     <div>
-      <PageHeader title="Explore Global Alternatives" badge={isDemo && <DemoTag />}>
+      <PageHeader title="Explore Global Alternatives" badge={isDemo && <DemoTag />} actions={<AiLauncher task="Compare my current sourcing countries with alternatives on cost, risk and emissions." context={['Global Alternatives']} />}>
         Compare sourcing the same product from other countries. These are hypothetical, country-level comparisons, not specific suppliers.
       </PageHeader>
       {!lanes.length ? <NoLanes /> : (

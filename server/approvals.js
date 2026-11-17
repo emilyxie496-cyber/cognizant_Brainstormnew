@@ -25,7 +25,7 @@ export class ApprovalError extends Error {
   }
 }
 
-export function createApprovals({ store, notifier, integrations }) {
+export function createApprovals({ store, notifier, integrations, onPending = () => {} }) {
   const deciding = new Set()
   const stamp = () => new Date().toISOString()
   const audit = (approval, actor, event, note) => ({ ...approval, audit: [...(approval.audit ?? []), { at: stamp(), actor, event, ...(note ? { note: String(note).slice(0, 300) } : {}) }] })
@@ -87,6 +87,7 @@ export function createApprovals({ store, notifier, integrations }) {
       await save(tenant, approval)
       approval = await execute(tenant, approval)
     }
+    if (approval.status === 'pending') await onPending(tenant, approval)
     return { approval, duplicate: false }
   }
 

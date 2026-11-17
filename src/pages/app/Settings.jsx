@@ -1,20 +1,23 @@
 import { useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import AiPreferences from '../../components/app/AiPreferences.jsx'
-import Integrations from './Integrations.jsx'
 import { AccessibilitySettings } from '../../components/app/Accessibility.jsx'
 import { SETTINGS_TABS } from '../../help/topics.js'
-import { Link, useSearchParams } from 'react-router-dom'
 import { formatCo2e } from '../../../shared/emissions.js'
 import { PLANS, PLAN_ORDER } from '../../../shared/entitlements.js'
-import { FinanceEditor, INDUSTRIES, PROVINCES, ProductEditor, SupplierCsvImport, SupplierEditor, locateCanadianPlace, locateSupplier } from '../../components/app/companyForms.jsx'
-import { Card, ConfirmModal, DataTable, DemoTag, Empty, Gate, Notice, NumberInput, PageHeader, Segmented, SelectInput, TextInput, useToast } from '../../components/app/kit.jsx'
+import { FinanceEditor, INDUSTRIES, PROVINCES, locateCanadianPlace } from '../../components/app/companyForms.jsx'
+import { Card, CompactPageHeader, ConfirmModal, DataTable, DemoTag, Gate, Notice, NumberInput, Segmented, SelectInput, TextInput, useToast } from '../../components/app/kit.jsx'
 import { Badge, Button, Icon } from '../../components/ui.jsx'
 import { DEMO_TEAM } from '../../data/demoCompanies.js'
 import { aggregateEmissions } from '../../engine/model.js'
-import { supabase } from '../../services/supabase.js'
+import { useTranslation } from '../../i18n/index.js'
 import { FEATURES, SECTIONS, VEHICLES, useViewPrefs } from '../../state/viewPrefs.js'
 import { useWorkspace } from '../../state/WorkspaceContext.jsx'
 import { money, percent } from '../../utils/format.js'
+import BrandingTab from './settings/BrandingTab.jsx'
+import FeaturesTab, { Switch } from './settings/FeaturesTab.jsx'
+import { EmailTab, IntegrationsSummary, LanguageTab } from './settings/PlatformTabs.jsx'
+import { ProductsTab, SuppliersTab } from './settings/RecordsTabs.jsx'
 
 function ProfileTab() {
   const { ws, updateCompany } = useWorkspace()
@@ -44,96 +47,6 @@ function ProfileTab() {
         <div className="flex items-end"><Button type="submit">Save profile</Button></div>
       </form>
     </Card>
-  )
-}
-
-function ProductsTab() {
-  const { ws, saveRecord, deleteRecord } = useWorkspace()
-  const toast = useToast()
-  const [drafts, setDrafts] = useState({})
-  const [deleting, setDeleting] = useState(null)
-  const update = (p) => (next) => setDrafts((d) => ({ ...d, [p.id]: { ...(d[p.id] ?? p), ...next } }))
-  const add = async () => {
-    await saveRecord('products', { id: crypto.randomUUID(), name: 'New product', category: '', hsCode: '', hsStatus: 'unverified' })
-  }
-  const save = async (p) => {
-    await saveRecord('products', drafts[p.id] ?? p)
-    toast('Product saved')
-  }
-  return (
-    <div className="space-y-3">
-      {ws.products.map((p, i) => (
-        <div key={p.id}>
-          <ProductEditor product={drafts[p.id] ?? p} index={i} industry={ws.company.industry} onChange={update(p)} onRemove={() => setDeleting(p)} />
-          <Button size="sm" className="mt-1" onClick={() => save(p)}>Save product</Button>
-        </div>
-      ))}
-      <Button variant="secondary" size="sm" onClick={add}><Icon name="plus" className="h-4 w-4" /> Add product</Button>
-      <ConfirmModal open={Boolean(deleting)} title="Delete product" onClose={() => setDeleting(null)} onConfirm={async () => { await deleteRecord('products', deleting.id); setDeleting(null) }}>
-        Delete {deleting?.name}?
-      </ConfirmModal>
-    </div>
-  )
-}
-
-function SuppliersTab() {
-  const { ws, saveRecord, deleteRecord, counts, limit, session } = useWorkspace()
-  const toast = useToast()
-  const [drafts, setDrafts] = useState({})
-  const [deleting, setDeleting] = useState(null)
-  const atLimit = counts.suppliers >= limit('suppliers')
-  const update = (s) => (next) => setDrafts((d) => ({ ...d, [s.id]: { ...(d[s.id] ?? s), ...next } }))
-
-  const add = async (row = {}) => {
-    try {
-      const id = crypto.randomUUID()
-      await saveRecord('suppliers', { id, name: 'New supplier', country: '', currency: 'CAD', mode: 'sea', productIds: [], certifications: [], compliance: {}, ...row })
-    } catch (err) {
-      toast(err.message, 'error')
-    }
-  }
-
-  const save = async (s) => {
-    const draft = drafts[s.id] ?? s
-    if (!draft.name?.trim() || !draft.country) return toast('A supplier needs a name and a country', 'error')
-    await saveRecord('suppliers', await locateSupplier(draft))
-    toast('Supplier saved')
-  }
-
-  const upload = async (s, file) => {
-    if (!file) return
-    const { error } = await supabase.storage.from('compliance-documents').upload(`${ws.company.id}/${s.id}/${file.name}`, file, { upsert: true })
-    toast(error ? `Upload failed: ${error.message}` : 'Document uploaded', error ? 'error' : 'good')
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-slate-600">{counts.suppliers} of {limit('suppliers').toLocaleString('en-CA')} suppliers used.</p>
-        <div className="flex gap-2">
-          <SupplierCsvImport onImport={async (rows) => { for (const row of rows) await add(row) }} />
-          <Button size="sm" disabled={atLimit} onClick={() => add()}><Icon name="plus" className="h-4 w-4" /> Add supplier</Button>
-        </div>
-      </div>
-      {atLimit && <Notice tone="warn">You have reached this plan’s supplier limit. Existing suppliers stay available and editable.</Notice>}
-      {ws.suppliers.map((s, i) => (
-        <div key={s.id}>
-          <SupplierEditor supplier={drafts[s.id] ?? s} index={i} products={ws.products} warehouses={ws.warehouses} onChange={update(s)} onRemove={() => setDeleting(s)} showCompliance />
-          <div className="mt-1 flex flex-wrap items-center gap-3">
-            <Button size="sm" onClick={() => save(s)}>Save supplier</Button>
-            {session?.mode === 'supabase' ? (
-              <label className="text-sm text-brand-800 underline">Upload document<input type="file" className="sr-only" onChange={(e) => upload(s, e.target.files?.[0])} /></label>
-            ) : (
-              <span className="text-xs text-slate-500">Document uploads need secure storage, which requires a configured account backend.</span>
-            )}
-          </div>
-        </div>
-      ))}
-      {!ws.suppliers.length && <Empty icon="building" title="No suppliers yet">Add a supplier or import a CSV.</Empty>}
-      <ConfirmModal open={Boolean(deleting)} title="Delete supplier" onClose={() => setDeleting(null)} onConfirm={async () => { await deleteRecord('suppliers', deleting.id); setDeleting(null) }}>
-        Delete {deleting?.name || 'this supplier'}? Linked shipments keep their records but lose the supplier link.
-      </ConfirmModal>
-    </div>
   )
 }
 
@@ -293,137 +206,93 @@ function PlanTab() {
   )
 }
 
-function Toggle({ label, blurb, checked, onChange, icon }) {
-  return (
-    <label className="flex cursor-pointer items-center gap-3 py-2.5">
-      {icon && (
-        <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${checked ? 'bg-brand-100 text-brand-300' : 'bg-slate-100 text-slate-500'}`}>
-          <Icon name={icon} className="h-[18px] w-[18px]" />
-        </span>
-      )}
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-semibold text-navy">{label}</span>
-        <span className="block text-xs text-slate-500">{blurb}</span>
-      </span>
-      <input type="checkbox" role="switch" aria-label={label} checked={checked} onChange={(e) => onChange(e.target.checked)} className="peer sr-only" />
-      <span aria-hidden="true" className={`relative h-6 w-11 shrink-0 rounded-full transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand-500 ${checked ? 'bg-brand-700' : 'bg-slate-300'}`}>
-        <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${checked ? 'translate-x-5' : ''}`} />
-      </span>
-    </label>
-  )
-}
-
 function DisplayTab() {
-  const { health } = useWorkspace()
-  const { prefs, setFeature, setSection, setVehicle, setTheme, reset } = useViewPrefs()
+  const { t } = useTranslation()
+  const { prefs, setSection, setVehicle, setTheme, reset } = useViewPrefs()
   const toast = useToast()
-  const on = health?.integrations ?? {}
   const needs = { activity: 'shipments' }
   return (
     <div className="space-y-3">
-      <Card title="Theme" subtitle="How the workspace looks. The sun and moon button in the top bar does the same.">
-        <Segmented label="Theme" value={prefs.theme} onChange={setTheme} options={[{ value: 'dark', label: 'Dark (purple)' }, { value: 'light', label: 'Light' }]} />
+      <Card title={t('display.theme')} subtitle="The sun and moon button in the top bar does the same.">
+        <Segmented label={t('display.theme')} value={prefs.theme} onChange={setTheme} options={[{ value: 'dark', label: t('display.dark') }, { value: 'light', label: t('display.light') }]} />
       </Card>
       <AccessibilitySettings />
-      <Notice tone="info">These choices change what this browser shows. They are saved here only, and they never delete data or change your plan.</Notice>
       <div className="grid gap-3 lg:grid-cols-2">
-        <Card title="Features" subtitle="Turning a feature off hides its tile, its menu entry and its page.">
+        <Card title={t('display.sections')} subtitle={t('display.sectionsHelp')}>
           <div className="divide-y divide-slate-100">
-            {FEATURES.map((f) => (
-              <Toggle key={f.id} icon={f.icon} label={f.label} blurb={f.blurb} checked={prefs.features[f.id]} onChange={(v) => setFeature(f.id, v)} />
-            ))}
+            {SECTIONS.map((s) => {
+              const blocked = needs[s.id] && !prefs.features[needs[s.id]]
+              return (
+                <label key={s.id} className="flex cursor-pointer items-center gap-3 py-2">
+                  <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-navy">{s.label}</span><span className="block text-xs text-slate-500">{blocked ? `Hidden while ${FEATURES.find((f) => f.id === needs[s.id]).label} is off.` : s.blurb}</span></span>
+                  <Switch label={s.label} checked={prefs.sections[s.id]} onChange={(v) => setSection(s.id, v)} />
+                </label>
+              )
+            })}
           </div>
         </Card>
-        <div className="space-y-3">
-          <Card title="Command Center sections" subtitle="Choose the blocks shown on the main screen.">
-            <div className="divide-y divide-slate-100">
-              {SECTIONS.map((s) => {
-                const blocked = needs[s.id] && !prefs.features[needs[s.id]]
-                return <Toggle key={s.id} label={s.label} blurb={blocked ? `Hidden while ${FEATURES.find((f) => f.id === needs[s.id]).label} is off.` : s.blurb} checked={prefs.sections[s.id]} onChange={(v) => setSection(s.id, v)} />
-              })}
-            </div>
-          </Card>
-          <Card title="Hero vehicle" subtitle="The 3D model shown in the hero scene. It can also be changed on the Command Center.">
-            <div data-tour="display-vehicle"><Segmented label="Hero vehicle" value={prefs.vehicle} onChange={setVehicle} options={VEHICLES.map((v) => ({ value: v.id, label: v.label }))} /></div>
-          </Card>
-          <Card title="Integrations" subtitle="Current status, reported by the server">
-            {health === null ? (
-              <p className="text-sm text-slate-600">Checking…</p>
-            ) : health.ok === false ? (
-              <p className="text-sm text-slate-600">API offline: using local fallbacks.</p>
-            ) : (
-              <ul className="divide-y divide-slate-100 text-sm">
-                {[['Emissions API', on.climatiq], ['Accounts', on.supabase], ['AI text', on.ai], ['Tracking', on.tracking]].map(([name, active]) => (
-                  <li key={name} className="flex justify-between py-1.5"><span>{name}</span><Badge tone={active ? 'emerald' : 'slate'}>{active ? 'Configured' : 'Not configured'}</Badge></li>
-                ))}
-              </ul>
-            )}
-          </Card>
-        </div>
+        <Card title={t('display.vehicle')} subtitle={t('display.vehicleHelp')}>
+          <div data-tour="display-vehicle"><Segmented label={t('display.vehicle')} value={prefs.vehicle} onChange={setVehicle} options={VEHICLES.map((v) => ({ value: v.id, label: v.label }))} /></div>
+          <p className="mt-3 text-xs text-slate-500">{t('display.localNote')}</p>
+        </Card>
       </div>
-      <Button variant="secondary" size="sm" onClick={() => { reset(); toast('Display settings restored') }}><Icon name="refresh" className="h-4 w-4" /> Restore defaults</Button>
+      <Button variant="secondary" size="sm" onClick={() => { reset(); toast('Display settings restored') }}><Icon name="refresh" className="h-4 w-4" /> {t('actions.restoreDefaults')}</Button>
     </div>
   )
 }
 
-// Settings are grouped by what they are about, so eleven tabs read as three short lists.
+// Grouped by what they are about: company records, platform capabilities, and this workspace.
 const SETTINGS_GROUPS = [
-  { label: 'Company', tabs: [
-    { id: 'profile', label: 'Profile', icon: 'building' },
-    { id: 'products', label: 'Products', icon: 'box' },
-    { id: 'suppliers', label: 'Suppliers', icon: 'users' },
-    { id: 'warehouses', label: 'Warehouses', icon: 'pin' },
-    { id: 'financials', label: 'Financials', icon: 'card' },
+  { id: 'company', tabs: [
+    { id: 'profile', icon: 'building' },
+    { id: 'branding', icon: 'image' },
+    { id: 'products', icon: 'box' },
+    { id: 'suppliers', icon: 'users' },
+    { id: 'warehouses', icon: 'pin' },
+    { id: 'financials', icon: 'card' },
   ] },
-  { label: 'AI and data', tabs: [
-    { id: 'ai', label: 'AI', icon: 'sparkles' },
-    { id: 'integrations', label: 'Integrations', icon: 'layers' },
+  { id: 'platform', tabs: [
+    { id: 'features', icon: 'layers' },
+    { id: 'ai', icon: 'sparkles' },
+    { id: 'integrations', icon: 'route' },
+    { id: 'email', icon: 'mail' },
   ] },
-  { label: 'Workspace', tabs: [
-    { id: 'display', label: 'Display', icon: 'settings' },
-    { id: 'team', label: 'Team', icon: 'user' },
-    { id: 'plan', label: 'Plan', icon: 'tag' },
-    { id: 'admin', label: 'Admin', icon: 'shield' },
+  { id: 'workspace', tabs: [
+    { id: 'display', icon: 'settings' },
+    { id: 'language', icon: 'languages' },
+    { id: 'team', icon: 'user' },
+    { id: 'plan', icon: 'tag' },
+    { id: 'admin', icon: 'shield' },
   ] },
 ]
 const ALL_TABS = SETTINGS_GROUPS.flatMap((g) => g.tabs)
-const TAB_BLURBS = {
-  profile: 'Your company name, location and operating figures.',
-  products: 'What you buy and sell, with HS codes.',
-  suppliers: 'Supplier records, lanes and documentation.',
-  warehouses: 'Where shipments are delivered.',
-  financials: 'Spending figures used in every calculation.',
-  ai: 'Connect AI models and choose what they may see.',
-  display: 'Theme, text size, and which features are shown.',
-  team: 'Who can use this workspace.',
-  plan: 'Your plan and its limits.',
-  admin: 'Usage, records and workspace status.',
-}
 
 /** A sidebar on wide screens and a scrolling strip on narrow ones. One tablist either way. */
 function SettingsNav({ active, onChange }) {
+  const { t } = useTranslation()
   const move = (e) => {
-    const index = ALL_TABS.findIndex((t) => t.id === active)
-    const next = ['ArrowDown', 'ArrowRight'].includes(e.key) ? (index + 1) % ALL_TABS.length : ['ArrowUp', 'ArrowLeft'].includes(e.key) ? (index + ALL_TABS.length - 1) % ALL_TABS.length : e.key === 'Home' ? 0 : e.key === 'End' ? ALL_TABS.length - 1 : null
+    const index = ALL_TABS.findIndex((x) => x.id === active)
+    const rtl = document.documentElement.dir === 'rtl'
+    const fwd = ['ArrowDown', rtl ? 'ArrowLeft' : 'ArrowRight']
+    const back = ['ArrowUp', rtl ? 'ArrowRight' : 'ArrowLeft']
+    const next = fwd.includes(e.key) ? (index + 1) % ALL_TABS.length : back.includes(e.key) ? (index + ALL_TABS.length - 1) % ALL_TABS.length : e.key === 'Home' ? 0 : e.key === 'End' ? ALL_TABS.length - 1 : null
     if (next === null) return
     e.preventDefault()
     onChange(ALL_TABS[next].id)
     e.currentTarget.querySelectorAll('[role="tab"]')[next].focus()
   }
   return (
-    <div role="tablist" aria-label="Settings sections" onKeyDown={move} className="wm-strip mb-4 flex gap-1 overflow-x-auto lg:sticky lg:top-24 lg:mb-0 lg:flex-col lg:gap-0 lg:overflow-visible lg:rounded-2xl wm-sidenav lg:border lg:border-slate-200 lg:p-2">
+    <div role="tablist" aria-label={t('settings.title')} aria-orientation="vertical" onKeyDown={move} className="wm-strip wm-sidenav mb-4 flex gap-1 overflow-x-auto lg:sticky lg:top-32 lg:mb-0 lg:flex-col lg:gap-0 lg:overflow-visible lg:rounded-2xl lg:border lg:border-slate-200 lg:p-2">
       {SETTINGS_GROUPS.map((group, g) => (
-        <div key={group.label} role="presentation" className={`flex shrink-0 gap-1 lg:flex-col lg:gap-0.5 ${g ? 'border-l border-slate-200 pl-1 lg:mt-2 lg:border-t lg:border-l-0 lg:pt-2 lg:pl-0' : ''}`}>
-          <p aria-hidden="true" className="hidden px-2.5 pb-1 text-[0.6875rem] font-semibold tracking-wider text-slate-500 uppercase lg:block">{group.label}</p>
-          {group.tabs.map((t) => {
-            const on = active === t.id
+        <div key={group.id} role="presentation" className={`flex shrink-0 gap-1 lg:flex-col lg:gap-0.5 ${g ? 'border-s border-slate-200 ps-1 lg:mt-2 lg:border-t lg:border-s-0 lg:pt-2 lg:ps-0' : ''}`}>
+          <p aria-hidden="true" className="hidden px-2.5 pb-1 text-[0.6875rem] font-semibold tracking-wider text-slate-500 uppercase lg:block">{t(`settings.groups.${group.id}`)}</p>
+          {group.tabs.map((tab) => {
+            const on = active === tab.id
             return (
-              <button
-                key={t.id} type="button" role="tab" id={`tab-${t.id}`} aria-controls={`panel-${t.id}`} aria-selected={on} tabIndex={on ? 0 : -1} onClick={() => onChange(t.id)}
-                className={`flex shrink-0 items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors ${on ? 'bg-brand-700 text-white' : 'text-slate-700 hover:bg-slate-100 hover:text-navy'}`}
-              >
-                <Icon name={t.icon} className="h-4 w-4 shrink-0" />
-                {t.label}
+              <button key={tab.id} type="button" role="tab" id={`tab-${tab.id}`} aria-controls={`panel-${tab.id}`} aria-selected={on} tabIndex={on ? 0 : -1} onClick={() => onChange(tab.id)}
+                className={`flex min-h-9 shrink-0 items-center gap-2 rounded-lg px-2.5 py-1.5 text-start text-sm font-medium whitespace-nowrap transition-colors ${on ? 'bg-brand-700 text-white' : 'text-slate-700 hover:bg-slate-100 hover:text-navy'}`}>
+                <Icon name={tab.icon} className="h-4 w-4 shrink-0" />
+                {t(`settings.tabs.${tab.id}`)}
               </button>
             )
           })}
@@ -435,34 +304,36 @@ function SettingsNav({ active, onChange }) {
 
 export default function Settings() {
   const { isDemo } = useWorkspace()
+  const { t } = useTranslation()
   const [params, setParams] = useSearchParams()
   const tab = SETTINGS_TABS.includes(params.get('tab')) ? params.get('tab') : 'profile'
   const setTab = (value) => setParams({ tab: value })
-  const current = ALL_TABS.find((t) => t.id === tab)
   return (
     <div>
-      <Link to="/app" className="mb-2 inline-flex min-h-9 items-center gap-1 text-sm font-semibold text-brand-800 hover:underline"><Icon name="arrowLeft" className="h-4 w-4" /> Back to Command Center</Link>
-      <PageHeader title="Company Settings" badge={isDemo && <DemoTag />}>Edit your company, records and plan, and choose which features are shown. Changes update every screen.</PageHeader>
-      <div className="lg:grid lg:grid-cols-[12.5rem_minmax(0,1fr)] lg:items-start lg:gap-5">
+      <Link to="/app" className="mb-2 inline-flex min-h-9 items-center gap-1 text-sm font-semibold text-brand-800 hover:underline"><Icon name="arrowLeft" className="h-4 w-4 rtl:rotate-180" /> {t('settings.back')}</Link>
+      <CompactPageHeader title={t('settings.title')} badge={isDemo && <DemoTag />} description={t('settings.subtitle')} />
+      <div className="lg:grid lg:grid-cols-[13.5rem_minmax(0,1fr)] lg:items-start lg:gap-5">
         <SettingsNav active={tab} onChange={setTab} />
         <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} data-tour={`settings-${tab}`} className="min-w-0">
-          {TAB_BLURBS[tab] && (
-            <div className="mb-3">
-              <h2 className="text-lg font-bold text-navy">{current.label}</h2>
-              <p className="text-sm text-slate-600">{TAB_BLURBS[tab]}</p>
-            </div>
-          )}
+          <div className="mb-3">
+            <h2 className="text-lg font-bold text-navy">{t(`settings.tabs.${tab}`)}</h2>
+            <p className="text-sm text-slate-600">{t(`settings.blurbs.${tab}`)}</p>
+          </div>
           {tab === 'profile' && <ProfileTab />}
-          {tab === 'ai' && <AiPreferences />}
-          {tab === 'integrations' && <Integrations embedded />}
-          {tab === 'display' && <DisplayTab />}
+          {tab === 'branding' && <BrandingTab />}
           {tab === 'products' && <ProductsTab />}
           {tab === 'suppliers' && <SuppliersTab />}
           {tab === 'warehouses' && <WarehousesTab />}
           {tab === 'financials' && <FinanceTab />}
+          {tab === 'features' && <FeaturesTab />}
+          {tab === 'ai' && <AiPreferences />}
+          {tab === 'integrations' && <IntegrationsSummary />}
+          {tab === 'email' && <EmailTab />}
+          {tab === 'display' && <DisplayTab />}
+          {tab === 'language' && <LanguageTab />}
           {tab === 'team' && <TeamTab />}
-          {tab === 'admin' && <AdminTab />}
           {tab === 'plan' && <PlanTab />}
+          {tab === 'admin' && <AdminTab />}
         </div>
       </div>
     </div>
