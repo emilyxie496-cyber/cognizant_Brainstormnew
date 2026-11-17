@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      try {
+        const size = JSON.parse(localStorage.getItem('waymark.viewPrefs.v1'))?.textSize;
+        if ([100, 115, 130, 150].includes(size)) document.documentElement.style.fontSize = size + '%';
+      } catch {}
+    </script>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Waymark helps Canadian small and medium-sized businesses make smarter supply-chain decisions across cost, risk, emissions and responsible sourcing." />
+    <meta name="theme-color" content="#5b21b6" />
+    <title>Waymark — Plan. Pivot. Progress.</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

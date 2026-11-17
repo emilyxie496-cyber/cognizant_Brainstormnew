@@ -1,0 +1,112 @@
+{
+  "ship": {
+    "file": "cargo_ship_detailed.glb",
+    "up": "z",
+    "srgbColors": true,
+    "lift": -1.55,
+    "glow": [
+      [
+        "^(win_|front_win|wing_win)",
+        "#ffd9a0"
+      ]
+    ],
+    "length": 36
+  },
+  "plane": {
+    "file": "boeing_747_detailed.glb",
+    "up": "z",
+    "srgbColors": true,
+    "length": 24,
+    "roughness": 0.35,
+    "hide": [
+      "gear",
+      "strut",
+      "tire",
+      "wheel_hub"
+    ],
+    "glass": [
+      "cockpit_glazing"
+    ],
+    "glow": [
+      [
+        "(passenger|upper_deck|door)_window",
+        "#ffd9a0"
+      ],
+      [
+        "beacon",
+        "#ff4d5e"
+      ]
+    ]
+  },
+  "train": {
+    "file": "modern_high_speed_train.glb",
+    "up": "z",
+    "srgbColors": true,
+    "length": 91,
+    "offset": [
+      -31.5,
+      0.15,
+      0
+    ],
+    "roughness": 0.35,
+    "spin": [
+      "train_wheel",
+      "wheel_hub"
+    ],
+    "glass": [
+      "glass"
+    ],
+    "glow": [
+      [
+        "^window_[0-9]",
+        "#ffd9a0"
+      ],
+      [
+        "headlight",
+        "#fff4d6"
+      ],
+      [
+        "tail_light",
+        "#ff4d5e"
+      ]
+    ]
+  },
+  "truck": {
+    "file": "modern_semi_truck.glb",
+    "up": "z",
+    "srgbColors": true,
+    "length": 25.4,
+    "offset": [
+      -5.7,
+      0,
+      0
+    ],
+    "roughness": 0.4,
+    "spin": [
+      "tire",
+      "wheel_hub",
+      "hub_cap",
+      "trailer_hub"
+    ],
+    "glass": [
+      "windshield",
+      "door_window",
+      "sleeper_window",
+      "mirror_glass"
+    ],
+    "glow": [
+      [
+        "headlight",
+        "#fff4d6"
+      ],
+      [
+        "clearance_light|side_marker|turn_signal",
+        "#ffb347"
+      ],
+      [
+        "brake_light",
+        "#ff4d5e"
+      ]
+    ]
+  }
+}

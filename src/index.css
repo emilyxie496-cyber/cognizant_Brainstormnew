@@ -1,0 +1,740 @@
+@import "tailwindcss";
+
+/*
+  Design tokens — "The Living Global Supply Chain".
+  Fonts are bundled locally via @fontsource (imported in main.jsx), so the
+  demo never depends on a remote font service.
+*/
+@theme {
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Manrope Variable", "Manrope", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+
+  /*
+    Named palette — "white & violet" (colour choices from waymark-branch2).
+    Token names are kept from the ocean theme so every animated component
+    picks up the new colours without code changes.
+  */
+  --color-midnight: #150a2e; /* deepest violet: dark cinematic sections */
+  --color-navy: #1e1538; /* headings / strong text */
+  --color-ocean: #5b21b6; /* primary violet */
+  --color-teal: #8b5cf6; /* bright violet accent */
+  --color-aqua: #c4b5fd; /* light lilac on dark */
+  --color-ice: #fbfaff; /* page background (near-white) */
+  --color-mist: #ece9f7; /* hairlines, soft fills */
+  --color-sun: #f5b94a; /* warm accent: Canada hubs, air freight */
+
+  /* Homepage accent tones — homepage hero, story, nav, footer only */
+  --color-deep: #1f0f45;
+  --color-marine: #4c1d95;
+  --color-atmos: #6d28d9;
+  --color-skylight: #a78bfa;
+  --color-icewhite: #f3f0ff;
+
+  /*
+    "brand" scale used across components (branch2 violet).
+    700 is the primary action colour (white text passes WCAG AA).
+  */
+  --color-brand-50: #f5f3ff;
+  --color-brand-100: #ede9fe;
+  --color-brand-200: #ddd6fe;
+  --color-brand-300: #c4b5fd;
+  --color-brand-400: #a78bfa;
+  --color-brand-500: #8b5cf6;
+  --color-brand-600: #6d28d9;
+  --color-brand-700: #5b21b6;
+  --color-brand-800: #4c1d95;
+  --color-brand-900: #2e1065;
+
+  --animate-fade-up: fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade-in: fade-in 0.35s ease-out both;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-ice text-slate-700 antialiased;
+  }
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+  [id] {
+    scroll-margin-top: 5.5rem;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-teal);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  dialog::backdrop {
+    background: rgb(21 10 46 / 0.6);
+    backdrop-filter: blur(3px);
+  }
+  input[type="range"] {
+    accent-color: var(--color-brand-700);
+  }
+}
+
+@layer components {
+  /* Scroll reveal: only hidden once JS has confirmed it can reveal it again (see useReveal). */
+  [data-reveal="pending"] {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  [data-reveal="shown"] {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+
+  /* Supply-chain map markers */
+  .wm-node {
+    display: flex;
+    height: 22px;
+    width: 22px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    border: 1.5px solid #fff;
+    background: var(--node);
+    color: #fff;
+    font-size: 0.625rem;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.45);
+  }
+  .wm-node--port,
+  .wm-node--airport {
+    height: 17px;
+    width: 17px;
+    font-size: 0.5625rem;
+  }
+  .wm-node--hq {
+    height: 26px;
+    width: 26px;
+    font-size: 0.75rem;
+    background: #fff;
+    color: #0b2239;
+    border-color: #34d399;
+  }
+  /* Suppliers sit above hubs, which often share nearly the same point at world zoom. */
+  .wm-node--supplier,
+  .wm-node--alternative {
+    z-index: 2;
+  }
+  .wm-node--hq {
+    z-index: 2;
+  }
+  .wm-node--approx {
+    border-style: dashed;
+  }
+  .wm-node--affected {
+    border-color: #ff5c85;
+    box-shadow: 0 0 0 3px rgb(200 30 74 / 0.45);
+  }
+  .wm-node:focus-visible,
+  .wm-vehicle:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+  /* Diamond drawn with clip-path: MapLibre positions markers with `transform`, so a CSS rotation would move them. */
+  .wm-vehicle {
+    z-index: 3;
+    height: 16px;
+    width: 16px;
+    cursor: pointer;
+    background: var(--node);
+    clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  }
+  .wm-vehicle::after {
+    content: "";
+    display: block;
+    height: 100%;
+    width: 100%;
+    background: #fff;
+    clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%, 50% 0, 50% 18%, 18% 50%, 50% 82%, 82% 50%, 50% 18%);
+  }
+  .wm-vehicle--delayed {
+    background: #c81e4a;
+    animation: wm-pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes wm-pulse {
+    50% {
+      opacity: 0.55;
+    }
+  }
+
+  /* Animated dashed route lines (SVG) */
+  .route-flow {
+    stroke-dasharray: 6 8;
+    animation: route-flow 1.6s linear infinite;
+  }
+  @keyframes route-flow {
+    to {
+      stroke-dashoffset: -28;
+    }
+  }
+
+  /* Trade news: accent line that grows in once, and a thin indeterminate loading bar */
+  .accent-grow {
+    transform-origin: top;
+    animation: accent-grow 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--accent-delay, 0ms);
+  }
+  @keyframes accent-grow {
+    from {
+      transform: scaleY(0);
+    }
+  }
+  .news-progress {
+    position: relative;
+    overflow: hidden;
+  }
+  .news-progress::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 40%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, transparent, var(--color-teal), transparent);
+    animation: news-progress 1.2s ease-in-out infinite;
+  }
+  @keyframes news-progress {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(250%);
+    }
+  }
+
+  /* Gentle bob for the ship illustration */
+  .bob {
+    animation: bob 4s ease-in-out infinite;
+  }
+  @keyframes bob {
+    50% {
+      transform: translateY(-3px) rotate(-0.6deg);
+    }
+  }
+
+  /* Soft pulse for map nodes */
+  .node-pulse {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: node-pulse 2.4s ease-out infinite;
+  }
+  @keyframes node-pulse {
+    0% {
+      opacity: 0.55;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(2.6);
+    }
+  }
+
+  /* Fine grain on dark cinematic sections */
+  .ocean-backdrop {
+    background:
+      radial-gradient(80% 60% at 70% 30%, rgb(109 40 217 / 0.4), transparent 70%),
+      radial-gradient(50% 40% at 10% 90%, rgb(167 139 250 / 0.16), transparent 70%),
+      var(--color-midnight);
+  }
+
+  /*
+    Homepage-only, lighter backdrops ("dark ocean at sunrise").
+    .ocean-backdrop above is left untouched because demo cards share it.
+    Hero ends on the same colour the story section starts with, so they join seamlessly.
+  */
+  .ocean-hero {
+    background:
+      radial-gradient(42% 52% at 72% 50%, rgb(167 139 250 / 0.22), transparent 72%),
+      radial-gradient(70% 55% at 88% 0%, rgb(109 40 217 / 0.08), transparent 70%),
+      radial-gradient(45% 40% at 4% 100%, rgb(196 181 253 / 0.12), transparent 70%),
+      linear-gradient(180deg, #ffffff 0%, #ffffff 55%, var(--color-ice) 100%);
+  }
+  .ocean-story {
+    background:
+      radial-gradient(60% 30% at 78% 18%, rgb(167 139 250 / 0.1), transparent 70%),
+      radial-gradient(50% 25% at 10% 70%, rgb(196 181 253 / 0.1), transparent 70%),
+      linear-gradient(180deg, var(--color-ice) 0%, #ffffff 100%);
+  }
+  /* Slow, barely-there light drift behind the globe (disabled for reduced motion below) */
+  .hero-aura {
+    background: radial-gradient(closest-side, rgb(167 139 250 / 0.26), rgb(109 40 217 / 0.08) 55%, transparent);
+    animation: hero-aura 14s ease-in-out infinite alternate;
+  }
+  @keyframes hero-aura {
+    from {
+      opacity: 0.75;
+      transform: scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1.03);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* Print / Save as PDF: only the report is printed, everything visible */
+@media print {
+  @page {
+    margin: 14mm;
+  }
+  body {
+    background: #fff;
+  }
+  [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  * {
+    animation: none !important;
+  }
+  .print-avoid-break {
+    break-inside: avoid;
+  }
+}
+
+/*
+  Workspace theme ("Premium Hero"). Scoped to .wm-app so the marketing site is
+  untouched. Remapping the colour tokens re-themes every screen from one place.
+*/
+.wm-app,
+html[data-wm-theme='light'] .wm-app .wm-hero {
+  color-scheme: dark;
+  --color-slate-50: #18224a;
+  --color-slate-100: #1c2751;
+  --color-slate-200: #2a3768;
+  --color-slate-300: #3a4a82;
+  --color-slate-400: #7f8cb8;
+  --color-slate-500: #98a4cb;
+  --color-slate-600: #aeb8d9;
+  --color-slate-700: #c8d0e8;
+  --color-slate-800: #dde2f2;
+  --color-slate-900: #f1f4fc;
+  --color-navy: #f4f6ff;
+  --color-mist: #232e5b;
+  --color-brand-50: rgb(124 108 255 / 0.16);
+  --color-brand-100: rgb(124 108 255 / 0.24);
+  --color-brand-200: rgb(124 108 255 / 0.4);
+  --color-brand-300: #b8aeff;
+  --color-brand-400: #a394ff;
+  --color-brand-500: #8b7bff;
+  --color-brand-600: #7c6cff;
+  --color-brand-700: #6a5af9;
+  --color-brand-800: #c4bbff;
+  --color-amber-50: rgb(245 158 11 / 0.14);
+  --color-amber-200: rgb(245 158 11 / 0.35);
+  --color-amber-800: #fcd34d;
+  --color-amber-900: #fde68a;
+  --color-rose-50: rgb(244 63 94 / 0.14);
+  --color-rose-200: rgb(244 63 94 / 0.35);
+  --color-rose-800: #fda4af;
+  --color-rose-900: #fecdd3;
+  --color-emerald-50: rgb(16 185 129 / 0.14);
+  --color-emerald-200: rgb(16 185 129 / 0.35);
+  --color-emerald-800: #6ee7b7;
+  --color-emerald-900: #a7f3d0;
+  --color-emerald-950: #d1fae5;
+  --color-sky-50: rgb(56 189 248 / 0.14);
+  --color-sky-200: rgb(56 189 248 / 0.35);
+  --color-sky-800: #7dd3fc;
+  --color-sky-900: #bae6fd;
+}
+.wm-app {
+  min-height: 100vh;
+  color: var(--color-slate-700);
+  background:
+    radial-gradient(60% 45% at 75% 0%, rgb(106 90 249 / 0.2), transparent 70%),
+    radial-gradient(45% 40% at 10% 100%, rgb(56 189 248 / 0.09), transparent 70%),
+    #0a1029;
+  background-attachment: fixed;
+}
+.wm-app .bg-white {
+  background: linear-gradient(160deg, rgb(32 42 88 / 0.72), rgb(18 26 58 / 0.82));
+}
+.wm-app input.bg-white,
+.wm-app select.bg-white,
+.wm-app textarea.bg-white,
+.wm-app dialog.bg-white {
+  background: #121a3a;
+}
+.wm-app .shadow-sm {
+  box-shadow: 0 10px 30px -18px rgb(0 0 0 / 0.7);
+}
+.wm-app .bg-slate-100.min-h-screen {
+  background: transparent;
+}
+.wm-app .hover\:bg-brand-800:hover {
+  background: #5a4ae8;
+}
+.wm-app .text-rose-700 {
+  color: #fda4af;
+}
+.wm-app .text-emerald-700,
+.wm-app .text-brand-700 {
+  color: #a7f3d0;
+}
+.wm-app .text-brand-700 {
+  color: #c4bbff;
+}
+.wm-app .text-amber-700 {
+  color: #fcd34d;
+}
+.wm-app dialog::backdrop {
+  background: rgb(5 8 22 / 0.7);
+}
+.wm-topbar {
+  background: rgb(10 16 41 / 0.82);
+  backdrop-filter: blur(10px);
+}
+.wm-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(124 108 255 / 0.45) transparent;
+}
+.wm-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.wm-scroll::-webkit-scrollbar-thumb {
+  background: rgb(124 108 255 / 0.45);
+  border-radius: 999px;
+}
+.wm-scroll:focus-visible {
+  outline: 2px solid #8b7bff;
+  outline-offset: -2px;
+}
+.wm-strip {
+  scrollbar-width: none;
+}
+.wm-strip::-webkit-scrollbar {
+  display: none;
+}
+/* Command Center hero. The gradient is what shows before the 3D scene loads, or without WebGL. */
+.wm-hero {
+  background:
+    radial-gradient(70% 90% at 78% 18%, rgb(106 90 249 / 0.5), transparent 70%),
+    linear-gradient(180deg, #060a1e 0%, #171a52 46%, #2b2f8f 58%, #0a1233 100%);
+  box-shadow: 0 30px 60px -40px rgb(106 90 249 / 0.6);
+}
+.wm-hero-shade {
+  background:
+    linear-gradient(90deg, rgb(6 10 30 / 0.78) 0%, rgb(6 10 30 / 0.35) 38%, transparent 62%),
+    linear-gradient(0deg, rgb(6 10 30 / 0.55) 0%, transparent 34%);
+}
+.wm-glass {
+  background: rgb(14 20 52 / 0.62);
+  border: 1px solid rgb(196 187 255 / 0.22);
+  backdrop-filter: blur(12px);
+}
+.wm-tile {
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+a.wm-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px -22px rgb(106 90 249 / 0.75);
+}
+@media (prefers-reduced-motion: reduce) {
+  .wm-tile {
+    transition: none;
+  }
+  a.wm-tile:hover {
+    transform: none;
+  }
+}
+.wm-hero-title {
+  background: linear-gradient(90deg, #ffffff, #c4bbff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* App accessibility: retain internal table/nav scrolling without page overflow. */
+.wm-app :focus-visible { outline: 2px solid #c4bbff; outline-offset: 3px; }
+.wm-app main, .wm-app form, .wm-app header > div { min-width: 0; }
+.wm-app { overflow-wrap: anywhere; }
+/* A dialog is as wide as its content needs (set per dialog), and never wider than the screen. */
+.wm-app dialog { max-width: min(var(--wm-dialog-max, 32rem), calc(100vw - 2rem)); }
+.wm-app button { white-space: normal; }
+.wm-app input, .wm-app select, .wm-app textarea { max-width: 100%; }
+.wm-app fieldset { min-width: 0; max-width: 100%; }
+.wm-app fieldset > .flex { flex-wrap: wrap; }
+.wm-app p.font-display.truncate, .wm-app .wm-tile > p.truncate { white-space: normal; overflow: visible; }
+.wm-skip-link { position: fixed; top: -10rem; left: 1rem; z-index: 100; background: #121a3a; color: white; padding: .7rem; border: 2px solid #c4bbff; }
+.wm-skip-link:focus { top: .5rem; }
+.wm-tour-layer { position: fixed; inset: 0; z-index: 80; min-height: 0; background: none; pointer-events: none; }
+.wm-tour-shade { position: fixed; inset: 0; background: rgb(5 8 22 / .45); pointer-events: auto; }
+.wm-tour-spotlight { position: fixed; border: 3px solid #c4bbff; border-radius: .6rem; box-shadow: 0 0 0 9999px rgb(5 8 22 / .25); pointer-events: none; }
+.wm-tour-panel { position: fixed; left: 50%; bottom: .5rem; transform: translateX(-50%); width: min(30rem, calc(100vw - 1rem)); max-height: 48dvh; overflow-y: auto; pointer-events: auto; }
+@media (max-width: 639px) {
+  .wm-app .grid-cols-2 { grid-template-columns: minmax(0, 1fr); }
+  .wm-app [class*="grid-cols-[8.5rem"] { grid-template-columns: minmax(0, 1fr); }
+  .wm-app [class*="min-w-52"] { min-width: 0; }
+  .wm-app [class*="min-w-56"] { min-width: 0; }
+  .wm-app [class*="min-w-44"] { min-width: 0; }
+  .wm-app [class*="grid-cols-[6.5rem"] { grid-template-columns: minmax(0, 1fr); }
+  .wm-app .wm-hero-title { font-size: 1.75rem; }
+  .wm-app .wm-topbar { position: relative; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wm-app *, .wm-app *::before, .wm-app *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+/*
+  Form controls. A dropdown has to look like something you can press: a clear
+  border, a chevron, and a hover state. Applies to every select in the app,
+  including ones written without the kit's control classes.
+*/
+.wm-app select {
+  appearance: none;
+  cursor: pointer;
+  min-height: 2.5rem;
+  padding: 0 2.1rem 0 0.75rem;
+  border: 1px solid #56659c;
+  border-radius: 0.5rem;
+  background-color: #1a2450;
+  color: #f1f4fc;
+  font-weight: 500;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c8d0e8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  background-size: 1rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.wm-app select:hover:not(:disabled) {
+  border-color: #a394ff;
+}
+.wm-app select:focus-visible {
+  border-color: #a394ff;
+  box-shadow: 0 0 0 3px rgb(124 108 255 / 0.35);
+  outline: none;
+}
+.wm-app select:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.wm-app select option {
+  background: #121a3a;
+  color: #f1f4fc;
+}
+.wm-app input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+.wm-app textarea {
+  border-color: #56659c;
+}
+.wm-app input[type='checkbox']:not(.sr-only),
+.wm-app input[type='radio'] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #7c6cff;
+  cursor: pointer;
+}
+
+/*
+  Light theme. The workspace is dark by default; choosing "Light" sets
+  data-wm-theme on <html>, which puts the original white-and-violet tokens back
+  and undoes the dark surface overrides above. The Command Center hero keeps its
+  night scene in both themes.
+*/
+html[data-wm-theme='light'] .wm-app {
+  color-scheme: light;
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-navy: #1e1538;
+  --color-mist: #ece9f7;
+  --color-brand-50: #f5f3ff;
+  --color-brand-100: #ede9fe;
+  --color-brand-200: #ddd6fe;
+  --color-brand-300: #c4b5fd;
+  --color-brand-400: #a78bfa;
+  --color-brand-500: #8b5cf6;
+  --color-brand-600: #6d28d9;
+  --color-brand-700: #5b21b6;
+  --color-brand-800: #4c1d95;
+  --color-amber-50: #fffbeb;
+  --color-amber-200: #fde68a;
+  --color-amber-800: #92400e;
+  --color-amber-900: #78350f;
+  --color-rose-50: #fff1f2;
+  --color-rose-200: #fecdd3;
+  --color-rose-800: #9f1239;
+  --color-rose-900: #881337;
+  --color-emerald-50: #ecfdf5;
+  --color-emerald-200: #a7f3d0;
+  --color-emerald-800: #065f46;
+  --color-emerald-900: #064e3b;
+  --color-emerald-950: #022c22;
+  --color-sky-50: #f0f9ff;
+  --color-sky-200: #bae6fd;
+  --color-sky-800: #075985;
+  --color-sky-900: #0c4a6e;
+  color: var(--color-slate-700);
+  background:
+    radial-gradient(60% 45% at 78% 0%, rgb(139 92 246 / 0.13), transparent 70%),
+    radial-gradient(45% 40% at 8% 100%, rgb(196 181 253 / 0.2), transparent 70%),
+    #f8f6ff;
+  background-attachment: fixed;
+}
+html[data-wm-theme='light'] .wm-app .bg-white,
+html[data-wm-theme='light'] .wm-app input.bg-white,
+html[data-wm-theme='light'] .wm-app select.bg-white,
+html[data-wm-theme='light'] .wm-app textarea.bg-white,
+html[data-wm-theme='light'] .wm-app dialog.bg-white {
+  background: #ffffff;
+}
+html[data-wm-theme='light'] .wm-app .shadow-sm {
+  box-shadow: 0 1px 2px rgb(30 21 56 / 0.05), 0 12px 28px -20px rgb(91 33 182 / 0.35);
+}
+html[data-wm-theme='light'] .wm-app .hover\:bg-brand-800:hover {
+  background: #4c1d95;
+}
+html[data-wm-theme='light'] .wm-app .text-rose-700 {
+  color: #be123c;
+}
+html[data-wm-theme='light'] .wm-app .text-emerald-700 {
+  color: #047857;
+}
+html[data-wm-theme='light'] .wm-app .text-brand-700 {
+  color: #5b21b6;
+}
+html[data-wm-theme='light'] .wm-app .text-amber-700 {
+  color: #b45309;
+}
+html[data-wm-theme='light'] .wm-app .text-brand-300 {
+  color: #6d28d9;
+}
+html[data-wm-theme='light'] .wm-app dialog::backdrop {
+  background: rgb(30 21 56 / 0.45);
+}
+html[data-wm-theme='light'] .wm-app :focus-visible {
+  outline-color: #6d28d9;
+}
+html[data-wm-theme='light'] .wm-topbar {
+  background: rgb(255 255 255 / 0.86);
+}
+html[data-wm-theme='light'] .wm-topbar .hover\:text-white:hover {
+  color: #4c1d95;
+}
+html[data-wm-theme='light'] .wm-topbar .hover\:bg-white\/5:hover {
+  background: #ede9fe;
+}
+html[data-wm-theme='light'] .wm-app .wm-hero-title {
+  background: linear-gradient(90deg, #2e1065, #6d28d9);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+html[data-wm-theme='light'] .wm-app select {
+  border-color: #b9b3d6;
+  background-color: #ffffff;
+  color: #1e1538;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b21b6' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+html[data-wm-theme='light'] .wm-app select:hover:not(:disabled),
+html[data-wm-theme='light'] .wm-app select:focus-visible {
+  border-color: #6d28d9;
+}
+html[data-wm-theme='light'] .wm-app select option {
+  background: #ffffff;
+  color: #1e1538;
+}
+html[data-wm-theme='light'] .wm-app input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+html[data-wm-theme='light'] .wm-app textarea {
+  border-color: #cbc6e0;
+}
+/* The hero stays a night scene, so everything inside it keeps the dark palette. */
+html[data-wm-theme='light'] .wm-app .wm-hero {
+  color: var(--color-slate-700);
+}
+html[data-wm-theme='light'] .wm-app .wm-hero .wm-hero-title {
+  background: linear-gradient(90deg, #ffffff, #c4bbff);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+html[data-wm-theme='light'] .wm-app .wm-hero .text-brand-300 {
+  color: #b8aeff;
+}
+html[data-wm-theme='light'] .wm-app .wm-hero .bg-white {
+  background: linear-gradient(160deg, rgb(32 42 88 / 0.72), rgb(18 26 58 / 0.82));
+}
+html[data-wm-theme='light'] .wm-app .wm-hero select {
+  border-color: #56659c;
+  background-color: #1a2450;
+  color: #f1f4fc;
+}
+
+/* Settings sidebar: a card on wide screens, in either theme. */
+@media (min-width: 64rem) {
+  .wm-app .wm-sidenav {
+    background: linear-gradient(160deg, rgb(32 42 88 / 0.72), rgb(18 26 58 / 0.82));
+    box-shadow: 0 10px 30px -18px rgb(0 0 0 / 0.7);
+  }
+  html[data-wm-theme='light'] .wm-app .wm-sidenav {
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgb(30 21 56 / 0.05), 0 12px 28px -20px rgb(91 33 182 / 0.35);
+  }
+}
+
+/* Selects that carry the kit's bg-white class would otherwise lose their chevron to the surface overrides. */
+.wm-app select.bg-white {
+  background: #1a2450 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c8d0e8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 0.6rem center / 1rem;
+}
+html[data-wm-theme='light'] .wm-app select.bg-white {
+  background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b21b6' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 0.6rem center / 1rem;
+}
+html[data-wm-theme='light'] .wm-app .wm-hero select.bg-white {
+  background: #1a2450 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c8d0e8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 0.6rem center / 1rem;
+}
