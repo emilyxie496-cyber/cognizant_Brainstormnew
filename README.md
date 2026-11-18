@@ -1,7 +1,8 @@
 # Waymark 3.0
 
 The 3.0 platform adds six integrated application pages: AI Agent Hub, Agent Activity, Approvals, Integrations, Inventory & Orders, and Financial Intelligence. CSV/XLSX imports save into the existing workspace collections; the original maps, simulator, alternatives, sustainability and reporting engines remain in use.
-
+https://my-web-app-36--41itoy0f.preview.emergentagent.com/
+https://waymark-wonder-final.lovable.app/
 Run `npm install`, `npm run dev`, and choose a Pro sample company at `/demo`. Open AI Agent Hub and select **Run guided demo** to load labeled sample business datasets, execute the internal planner, compare disruption responses, generate a report and prepare an approval request. No model credentials are needed. If Slack is disconnected, approval records `not_sent`, never a successful delivery.
 
 The full 3.0 application requires the Express API. Static hosting and the existing Supabase Edge Function retain their older feature subset. See [deployment](DEPLOY.md), [integration setup](docs/INTEGRATIONS.md) and [implementation/verification report](docs/WAYMARK_3_IMPLEMENTATION.md).
